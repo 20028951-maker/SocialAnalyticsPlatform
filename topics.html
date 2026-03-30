@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Topics — SSMAP</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <link rel="stylesheet" href="css/style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  <style>
+    .topics-layout { display:grid; grid-template-columns:1fr 340px; gap:24px; }
+
+    /* Word Cloud */
+    .word-cloud-container {
+      display: flex; flex-wrap: wrap; gap: 10px;
+      padding: 24px; justify-content: center; align-items: center;
+      min-height: 220px;
+    }
+    .word-tag {
+      padding: 6px 16px; border-radius: 24px;
+      font-weight: 700; cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+      border: 1px solid transparent;
+    }
+    .word-tag:hover { transform: scale(1.12); box-shadow: 0 4px 16px rgba(0,0,0,0.3); }
+
+    /* Topic Cards */
+    .topic-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 18px;
+      transition: var(--transition-slow);
+    }
+    .topic-card:hover { transform:translateY(-2px); box-shadow:var(--shadow-md); border-color:var(--border-light); }
+    .topic-card-header { display:flex; align-items:center; gap:12px; margin-bottom:14px; }
+    .topic-rank { width:32px; height:32px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:800; flex-shrink:0; }
+    .topic-hashtag { font-size:16px; font-weight:700; color:var(--text-primary); }
+    .topic-category { font-size:11px; color:var(--text-muted); margin-top:2px; }
+    .topic-stats { display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-top:12px; }
+    .topic-stat { text-align:center; padding:8px; background:var(--bg-secondary); border-radius:6px; }
+    .topic-stat-val { font-size:13px; font-weight:700; color:var(--text-primary); }
+    .topic-stat-lbl { font-size:10px; color:var(--text-muted); text-transform:uppercase; letter-spacing:.4px; }
+
+    .related-tag {
+      display:inline-flex; align-items:center; gap:4px;
+      padding:3px 10px; border-radius:16px;
+      background:var(--bg-secondary); border:1px solid var(--border);
+      font-size:11px; color:var(--text-secondary); font-weight:500;
+      cursor:pointer; transition:var(--transition); margin:3px;
+    }
+    .related-tag:hover { border-color:var(--primary); color:var(--primary-light); }
+
+    .keyword-item { display:flex; align-items:center; gap:14px; padding:12px 0; border-bottom:1px solid var(--border); }
+    .keyword-item:last-child { border:none; }
+    .keyword-rank { font-size:13px; font-weight:700; color:var(--text-muted); width:24px; }
+    .keyword-name { flex:1; font-size:13px; font-weight:600; color:var(--text-primary); }
+    .keyword-bar-wrap { width:120px; }
+
+    .chart-row { display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:24px; }
+    .topics-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-bottom:24px; }
+
+    @media(max-width:1100px){ .topics-layout{grid-template-columns:1fr} .topics-grid{grid-template-columns:1fr 1fr} .chart-row{grid-template-columns:1fr} }
+    @media(max-width:700px){ .topics-grid{grid-template-columns:1fr} }
+  </style>
+</head>
+<body>
+<div class="app-container">
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-icon"><i class="fa-solid fa-chart-network"></i></div>
+      <div><div class="logo-text">SSMAP</div><div class="logo-sub">Analytics Platform</div></div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section-title">Main</div>
+      <a href="dashboard.html" class="nav-item"><i class="fa-solid fa-grid-2"></i> Dashboard</a>
+      <a href="sentiment.html" class="nav-item"><i class="fa-solid fa-face-smile"></i> Sentiment Analysis</a>
+      <a href="trends.html"    class="nav-item"><i class="fa-solid fa-chart-line-up"></i> Trend Prediction</a>
+      <a href="upload.html"    class="nav-item"><i class="fa-solid fa-cloud-arrow-up"></i> Upload Dataset</a>
+      <a href="reports.html"   class="nav-item"><i class="fa-solid fa-file-chart-column"></i> Reports</a>
+      <div class="nav-section-title" style="margin-top:12px">Analytics</div>
+      <a href="topics.html"   class="nav-item active"><i class="fa-solid fa-hashtag"></i> Topics <span class="nav-badge">New</span></a>
+      <a href="audience.html" class="nav-item"><i class="fa-solid fa-users"></i> Audience</a>
+      <a href="platforms.html" class="nav-item"><i class="fa-solid fa-share-nodes"></i> Platforms</a>
+      <div class="nav-section-title" style="margin-top:12px">System</div>
+      <a href="#" class="nav-item"><i class="fa-solid fa-bell"></i> Alerts <span class="nav-badge">3</span></a>
+      <a href="#" class="nav-item"><i class="fa-solid fa-gear"></i> Settings</a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-card">
+        <div class="user-avatar">AJ</div>
+        <div><div class="user-name">Alex Johnson</div><div class="user-role">Admin</div></div>
+        <i class="fa-solid fa-ellipsis-vertical"></i>
+      </div>
+      <button class="btn btn-secondary btn-block btn-sm" style="margin-top:8px" id="logout-btn">
+        <i class="fa-solid fa-right-from-bracket"></i> Logout
+      </button>
+    </div>
+  </aside>
+
+  <div class="main-content">
+    <div class="topbar">
+      <div>
+        <div class="topbar-title">Topics</div>
+        <div class="topbar-subtitle">Trending hashtags, keywords and topic clusters</div>
+      </div>
+      <div class="topbar-spacer"></div>
+      <div class="search-bar">
+        <i class="fa-solid fa-magnifying-glass"></i>
+        <input type="text" placeholder="Search topics…" />
+      </div>
+      <select class="form-control" style="width:auto;padding:8px 14px;font-size:13px">
+        <option>Last 7 days</option>
+        <option>Last 30 days</option>
+        <option>Last 90 days</option>
+      </select>
+      <button class="btn btn-primary btn-sm"><i class="fa-solid fa-download"></i> Export</button>
+    </div>
+
+    <div class="page-content">
+
+      <!-- KPI Cards -->
+      <div class="grid grid-4 animate-in" style="margin-bottom:24px">
+        <div class="stat-card primary">
+          <div class="stat-icon primary"><i class="fa-solid fa-hashtag"></i></div>
+          <div class="stat-content">
+            <div class="stat-value" data-count="1842">0</div>
+            <div class="stat-label">Total Topics</div>
+            <div class="stat-change up"><i class="fa-solid fa-arrow-trend-up"></i> +28 this week</div>
+          </div>
+        </div>
+        <div class="stat-card warning">
+          <div class="stat-icon warning"><i class="fa-solid fa-fire"></i></div>
+          <div class="stat-content">
+            <div class="stat-value" data-count="23">0</div>
+            <div class="stat-label">Trending Now</div>
+            <div class="stat-change up"><i class="fa-solid fa-arrow-trend-up"></i> +7 today</div>
+          </div>
+        </div>
+        <div class="stat-card success">
+          <div class="stat-icon success"><i class="fa-solid fa-star"></i></div>
+          <div class="stat-content">
+            <div class="stat-value" data-count="42800">0</div>
+            <div class="stat-label">Top Topic Mentions</div>
+            <div class="stat-change up"><i class="fa-solid fa-arrow-trend-up"></i> #AI leading</div>
+          </div>
+        </div>
+        <div class="stat-card info">
+          <div class="stat-icon info"><i class="fa-solid fa-layer-group"></i></div>
+          <div class="stat-content">
+            <div class="stat-value" data-count="12">0</div>
+            <div class="stat-label">Topic Clusters</div>
+            <div class="stat-change up"><i class="fa-solid fa-arrow-trend-up"></i> 3 new clusters</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="topics-layout">
+        <!-- Left -->
+        <div>
+          <!-- Word Cloud -->
+          <div class="card animate-in-delay-1" style="margin-bottom:24px">
+            <div class="card-header">
+              <div>
+                <div class="card-title">Topic Word Cloud</div>
+                <div class="card-subtitle">Size = mention frequency · Color = sentiment</div>
+              </div>
+              <div class="tabs">
+                <button class="tab-btn active">All</button>
+                <button class="tab-btn">Positive</button>
+                <button class="tab-btn">Negative</button>
+              </div>
+            </div>
+            <div class="word-cloud-container">
+              <span class="word-tag" style="font-size:32px;background:rgba(99,102,241,0.2);color:#818cf8;border-color:rgba(99,102,241,0.3)">#AI</span>
+              <span class="word-tag" style="font-size:22px;background:rgba(16,185,129,0.2);color:#34d399;border-color:rgba(16,185,129,0.3)">#Innovation</span>
+              <span class="word-tag" style="font-size:26px;background:rgba(245,158,11,0.2);color:#fbbf24;border-color:rgba(245,158,11,0.3)">#Tech</span>
+              <span class="word-tag" style="font-size:18px;background:rgba(239,68,68,0.2);color:#f87171;border-color:rgba(239,68,68,0.3)">#CustomerService</span>
+              <span class="word-tag" style="font-size:24px;background:rgba(6,182,212,0.2);color:#22d3ee;border-color:rgba(6,182,212,0.3)">#DataScience</span>
+              <span class="word-tag" style="font-size:20px;background:rgba(139,92,246,0.2);color:#c084fc;border-color:rgba(139,92,246,0.3)">#MachineLearning</span>
+              <span class="word-tag" style="font-size:17px;background:rgba(99,102,241,0.15);color:#a5b4fc">#CloudComputing</span>
+              <span class="word-tag" style="font-size:21px;background:rgba(16,185,129,0.15);color:#6ee7b7">#Sustainability</span>
+              <span class="word-tag" style="font-size:16px;background:rgba(245,158,11,0.15);color:#fde68a">#Startups</span>
+              <span class="word-tag" style="font-size:19px;background:rgba(6,182,212,0.15);color:#67e8f9">#NLP</span>
+              <span class="word-tag" style="font-size:15px;background:rgba(239,68,68,0.15);color:#fca5a5">#ProductReview</span>
+              <span class="word-tag" style="font-size:22px;background:rgba(99,102,241,0.2);color:#818cf8">#GenerativeAI</span>
+              <span class="word-tag" style="font-size:16px;background:rgba(16,185,129,0.15);color:#34d399">#Analytics</span>
+              <span class="word-tag" style="font-size:18px;background:rgba(139,92,246,0.15);color:#c084fc">#DataPrivacy</span>
+              <span class="word-tag" style="font-size:14px;background:rgba(245,158,11,0.15);color:#fbbf24">#RemoteWork</span>
+              <span class="word-tag" style="font-size:20px;background:rgba(6,182,212,0.2);color:#22d3ee">#Cybersecurity</span>
+              <span class="word-tag" style="font-size:15px;background:rgba(99,102,241,0.1);color:#a5b4fc">#Blockchain</span>
+              <span class="word-tag" style="font-size:17px;background:rgba(239,68,68,0.15);color:#f87171">#UXDesign</span>
+              <span class="word-tag" style="font-size:13px;background:rgba(16,185,129,0.1);color:#6ee7b7">#OpenSource</span>
+              <span class="word-tag" style="font-size:16px;background:rgba(245,158,11,0.1);color:#fde68a">#FutureTech</span>
+            </div>
+          </div>
+
+          <!-- Charts Row -->
+          <div class="chart-row animate-in-delay-2">
+            <div class="card">
+              <div class="card-header">
+                <div class="card-title">Topic Volume Over Time</div>
+                <div class="card-subtitle">Top 3 topics — last 7 days</div>
+              </div>
+              <canvas id="topicTimeChart" height="110"></canvas>
+            </div>
+            <div class="card">
+              <div class="card-header">
+                <div class="card-title">Topic Categories</div>
+                <div class="card-subtitle">Distribution by category</div>
+              </div>
+              <canvas id="topicCategoryChart" height="110"></canvas>
+            </div>
+          </div>
+
+          <!-- Top Topics Grid -->
+          <div style="margin-bottom:16px" class="animate-in-delay-3">
+            <div class="flex items-center justify-between" style="margin-bottom:16px">
+              <h4>Top Trending Topics</h4>
+              <div class="flex gap-2">
+                <button class="filter-pill active" style="padding:6px 14px;border-radius:20px;border:1px solid var(--primary);background:rgba(99,102,241,0.15);color:var(--primary-light);font-size:12px;font-weight:500;cursor:pointer;font-family:inherit">All</button>
+                <button class="filter-pill" style="padding:6px 14px;border-radius:20px;border:1px solid var(--border);background:var(--bg-secondary);color:var(--text-secondary);font-size:12px;font-weight:500;cursor:pointer;font-family:inherit">Tech</button>
+                <button class="filter-pill" style="padding:6px 14px;border-radius:20px;border:1px solid var(--border);background:var(--bg-secondary);color:var(--text-secondary);font-size:12px;font-weight:500;cursor:pointer;font-family:inherit">Business</button>
+                <button class="filter-pill" style="padding:6px 14px;border-radius:20px;border:1px solid var(--border);background:var(--bg-secondary);color:var(--text-secondary);font-size:12px;font-weight:500;cursor:pointer;font-family:inherit">Social</button>
+              </div>
+            </div>
+            <div class="topics-grid">
+              <div class="topic-card">
+                <div class="topic-card-header">
+                  <div class="topic-rank" style="background:rgba(245,158,11,0.2);color:#fbbf24">1</div>
+                  <div>
+                    <div class="topic-hashtag">#AI</div>
+                    <div class="topic-category">Technology · AI/ML</div>
+                  </div>
+                  <span class="badge badge-success" style="margin-left:auto"><i class="fa-solid fa-arrow-trend-up"></i> +127%</span>
+                </div>
+                <div class="progress-bar"><div class="progress-fill primary" data-width="100" style="width:0%"></div></div>
+                <div class="topic-stats">
+                  <div class="topic-stat"><div class="topic-stat-val">42.8K</div><div class="topic-stat-lbl">Mentions</div></div>
+                  <div class="topic-stat"><div class="topic-stat-val text-success">78%</div><div class="topic-stat-lbl">Positive</div></div>
+                  <div class="topic-stat"><div class="topic-stat-val">5.2M</div><div class="topic-stat-lbl">Reach</div></div>
+                </div>
+                <div style="margin-top:10px">
+                  <span class="related-tag">#GenerativeAI</span>
+                  <span class="related-tag">#ChatGPT</span>
+                  <span class="related-tag">#LLM</span>
+                </div>
+              </div>
+
+              <div class="topic-card">
+                <div class="topic-card-header">
+                  <div class="topic-rank" style="background:rgba(148,163,184,0.2);color:#94a3b8">2</div>
+                  <div>
+                    <div class="topic-hashtag">#Tech</div>
+                    <div class="topic-category">Technology · General</div>
+                  </div>
+                  <span class="badge badge-success" style="margin-left:auto"><i class="fa-solid fa-arrow-trend-up"></i> +64%</span>
+                </div>
+                <div class="progress-bar"><div class="progress-fill success" data-width="74" style="width:0%"></div></div>
+                <div class="topic-stats">
+                  <div class="topic-stat"><div class="topic-stat-val">31.5K</div><div class="topic-stat-lbl">Mentions</div></div>
+                  <div class="topic-stat"><div class="topic-stat-val text-success">71%</div><div class="topic-stat-lbl">Positive</div></div>
+                  <div class="topic-stat"><div class="topic-stat-val">3.8M</div><div class="topic-stat-lbl">Reach</div></div>
+                </div>
+                <div style="margin-top:10px">
+                  <span class="related-tag">#TechNews</span>
+                  <span class="related-tag">#Innovation</span>
+                </div>
+              </div>
+
+              <div class="topic-card">
+                <div class="topic-card-header">
+                  <div class="topic-rank" style="background:rgba(205,127,50,0.2);color:#cd7f32">3</div>
+                  <div>
+                    <div class="topic-hashtag">#DataScience</div>
+                    <div class="topic-category">Technology · Data</div>
+                  </div>
+                  <span class="badge badge-success" style="margin-left:auto"><i class="fa-solid fa-arrow-trend-up"></i> +48%</span>
+                </div>
+                <div class="progress-bar"><div class="progress-fill warning" data-width="52" style="width:0%"></div></div>
+                <div class="topic-stats">
+                  <div class="topic-stat"><div class="topic-stat-val">22.1K</div><div class="topic-stat-lbl">Mentions</div></div>
+                  <div class="topic-stat"><div class="topic-stat-val text-success">69%</div><div class="topic-stat-lbl">Positive</div></div>
+                  <div class="topic-stat"><div class="topic-stat-val">2.1M</div><div class="topic-stat-lbl">Reach</div></div>
+                </div>
+                <div style="margin-top:10px">
+                  <span class="related-tag">#Python</span>
+                  <span class="related-tag">#BigData</span>
+                  <span class="related-tag">#Analytics</span>
+                </div>
+              </div>
+
+              <div class="topic-card">
+                <div class="topic-card-header">
+                  <div class="topic-rank" style="background:rgba(99,102,241,0.15);color:#818cf8">4</div>
+                  <div>
+                    <div class="topic-hashtag">#Sustainability</div>
+                    <div class="topic-category">Environment · ESG</div>
+                  </div>
+                  <span class="badge badge-success" style="margin-left:auto"><i class="fa-solid fa-arrow-trend-up"></i> +39%</span>
+                </div>
+                <div class="progress-bar"><div class="progress-fill success" data-width="43" style="width:0%"></div></div>
+                <div class="topic-stats">
+                  <div class="topic-stat"><div class="topic-stat-val">18.4K</div><div class="topic-stat-lbl">Mentions</div></div>
+                  <div class="topic-stat"><div class="topic-stat-val text-success">81%</div><div class="topic-stat-lbl">Positive</div></div>
+                  <div class="topic-stat"><div class="topic-stat-val">1.9M</div><div class="topic-stat-lbl">Reach</div></div>
+                </div>
+                <div style="margin-top:10px">
+                  <span class="related-tag">#GreenTech</span>
+                  <span class="related-tag">#ClimateAction</span>
+                </div>
+              </div>
+
+              <div class="topic-card">
+                <div class="topic-card-header">
+                  <div class="topic-rank" style="background:rgba(99,102,241,0.1);color:#818cf8">5</div>
+                  <div>
+                    <div class="topic-hashtag">#CustomerService</div>
+                    <div class="topic-category">Business · Support</div>
+                  </div>
+                  <span class="badge badge-danger" style="margin-left:auto"><i class="fa-solid fa-arrow-trend-down"></i> -18%</span>
+                </div>
+                <div class="progress-bar"><div class="progress-fill danger" data-width="37" style="width:0%"></div></div>
+                <div class="topic-stats">
+                  <div class="topic-stat"><div class="topic-stat-val">15.8K</div><div class="topic-stat-lbl">Mentions</div></div>
+                  <div class="topic-stat"><div class="topic-stat-val text-danger">38%</div><div class="topic-stat-lbl">Positive</div></div>
+                  <div class="topic-stat"><div class="topic-stat-val">1.4M</div><div class="topic-stat-lbl">Reach</div></div>
+                </div>
+                <div style="margin-top:10px">
+                  <span class="related-tag">#Support</span>
+                  <span class="related-tag">#Complaint</span>
+                </div>
+              </div>
+
+              <div class="topic-card">
+                <div class="topic-card-header">
+                  <div class="topic-rank" style="background:rgba(99,102,241,0.1);color:#818cf8">6</div>
+                  <div>
+                    <div class="topic-hashtag">#Cybersecurity</div>
+                    <div class="topic-category">Technology · Security</div>
+                  </div>
+                  <span class="badge badge-warning" style="margin-left:auto"><i class="fa-solid fa-minus"></i> +5%</span>
+                </div>
+                <div class="progress-bar"><div class="progress-fill primary" data-width="28" style="width:0%"></div></div>
+                <div class="topic-stats">
+                  <div class="topic-stat"><div class="topic-stat-val">11.2K</div><div class="topic-stat-lbl">Mentions</div></div>
+                  <div class="topic-stat"><div class="topic-stat-val text-warning">55%</div><div class="topic-stat-lbl">Positive</div></div>
+                  <div class="topic-stat"><div class="topic-stat-val">980K</div><div class="topic-stat-lbl">Reach</div></div>
+                </div>
+                <div style="margin-top:10px">
+                  <span class="related-tag">#DataPrivacy</span>
+                  <span class="related-tag">#Hacking</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Panel -->
+        <div>
+          <!-- Top Keywords -->
+          <div class="card animate-in-delay-1" style="margin-bottom:20px">
+            <div class="card-header">
+              <div class="card-title">Top Keywords</div>
+              <span class="badge badge-primary">Last 24h</span>
+            </div>
+            <div>
+              <div class="keyword-item">
+                <span class="keyword-rank">1</span>
+                <span class="keyword-name">artificial intelligence</span>
+                <div class="keyword-bar-wrap">
+                  <div class="progress-bar"><div class="progress-fill primary" data-width="100" style="width:0%"></div></div>
+                </div>
+                <span style="font-size:12px;font-weight:600;color:var(--text-primary);width:40px;text-align:right">42.8K</span>
+              </div>
+              <div class="keyword-item">
+                <span class="keyword-rank">2</span>
+                <span class="keyword-name">machine learning</span>
+                <div class="keyword-bar-wrap">
+                  <div class="progress-bar"><div class="progress-fill success" data-width="78" style="width:0%"></div></div>
+                </div>
+                <span style="font-size:12px;font-weight:600;color:var(--text-primary);width:40px;text-align:right">33.4K</span>
+              </div>
+              <div class="keyword-item">
+                <span class="keyword-rank">3</span>
+                <span class="keyword-name">data analytics</span>
+                <div class="keyword-bar-wrap">
+                  <div class="progress-bar"><div class="progress-fill warning" data-width="62" style="width:0%"></div></div>
+                </div>
+                <span style="font-size:12px;font-weight:600;color:var(--text-primary);width:40px;text-align:right">26.6K</span>
+              </div>
+              <div class="keyword-item">
+                <span class="keyword-rank">4</span>
+                <span class="keyword-name">cloud computing</span>
+                <div class="keyword-bar-wrap">
+                  <div class="progress-bar"><div class="progress-fill primary" data-width="51" style="width:0%"></div></div>
+                </div>
+                <span style="font-size:12px;font-weight:600;color:var(--text-primary);width:40px;text-align:right">21.8K</span>
+              </div>
+              <div class="keyword-item">
+                <span class="keyword-rank">5</span>
+                <span class="keyword-name">cybersecurity</span>
+                <div class="keyword-bar-wrap">
+                  <div class="progress-bar"><div class="progress-fill danger" data-width="40" style="width:0%"></div></div>
+                </div>
+                <span style="font-size:12px;font-weight:600;color:var(--text-primary);width:40px;text-align:right">17.1K</span>
+              </div>
+              <div class="keyword-item">
+                <span class="keyword-rank">6</span>
+                <span class="keyword-name">sustainability</span>
+                <div class="keyword-bar-wrap">
+                  <div class="progress-bar"><div class="progress-fill success" data-width="33" style="width:0%"></div></div>
+                </div>
+                <span style="font-size:12px;font-weight:600;color:var(--text-primary);width:40px;text-align:right">14.1K</span>
+              </div>
+              <div class="keyword-item">
+                <span class="keyword-rank">7</span>
+                <span class="keyword-name">remote work</span>
+                <div class="keyword-bar-wrap">
+                  <div class="progress-bar"><div class="progress-fill primary" data-width="26" style="width:0%"></div></div>
+                </div>
+                <span style="font-size:12px;font-weight:600;color:var(--text-primary);width:40px;text-align:right">11.1K</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Topic Sentiment -->
+          <div class="card animate-in-delay-2" style="margin-bottom:20px">
+            <div class="card-header">
+              <div class="card-title">Sentiment by Topic</div>
+              <div class="card-subtitle">Top 5 topics</div>
+            </div>
+            <canvas id="topicSentimentChart" height="160"></canvas>
+          </div>
+
+          <!-- Emerging Topics -->
+          <div class="card animate-in-delay-3">
+            <div class="card-header">
+              <div class="card-title">Newly Emerging</div>
+              <span class="badge badge-warning"><i class="fa-solid fa-fire"></i> Hot</span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:10px">
+              <div style="display:flex;align-items:center;gap:12px;padding:10px;background:var(--bg-secondary);border-radius:var(--radius-sm);border:1px solid var(--border)">
+                <i class="fa-solid fa-arrow-trend-up" style="color:var(--success)"></i>
+                <div style="flex:1">
+                  <div style="font-size:13px;font-weight:600;color:var(--text-primary)">#QuantumComputing</div>
+                  <div style="font-size:11px;color:var(--text-muted)">First detected 3h ago · 2.4K mentions</div>
+                </div>
+                <span class="badge badge-success">+890%</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:12px;padding:10px;background:var(--bg-secondary);border-radius:var(--radius-sm);border:1px solid var(--border)">
+                <i class="fa-solid fa-arrow-trend-up" style="color:var(--success)"></i>
+                <div style="flex:1">
+                  <div style="font-size:13px;font-weight:600;color:var(--text-primary)">#AIRegulation</div>
+                  <div style="font-size:11px;color:var(--text-muted)">First detected 6h ago · 1.8K mentions</div>
+                </div>
+                <span class="badge badge-success">+540%</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:12px;padding:10px;background:var(--bg-secondary);border-radius:var(--radius-sm);border:1px solid var(--border)">
+                <i class="fa-solid fa-arrow-trend-up" style="color:var(--warning)"></i>
+                <div style="flex:1">
+                  <div style="font-size:13px;font-weight:600;color:var(--text-primary)">#EdgeComputing</div>
+                  <div style="font-size:11px;color:var(--text-muted)">First detected 12h ago · 980 mentions</div>
+                </div>
+                <span class="badge badge-warning">+210%</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="js/app.js"></script>
+<script>
+  Auth.requireAuth();
+
+  // Topic Volume Over Time
+  new Chart(document.getElementById('topicTimeChart'), {
+    type: 'line',
+    data: {
+      labels: ['Mar 24','Mar 25','Mar 26','Mar 27','Mar 28','Mar 29','Mar 30'],
+      datasets: [
+        { label:'#AI',          data:[28000,31000,35000,38000,40000,41000,42800], borderColor:'#6366f1', backgroundColor:'rgba(99,102,241,0.1)', fill:true, tension:0.4, pointRadius:3, borderWidth:2 },
+        { label:'#Tech',        data:[18000,21000,24000,26000,28000,30000,31500], borderColor:'#10b981', tension:0.4, pointRadius:3, borderWidth:2 },
+        { label:'#DataScience', data:[12000,14000,16000,18000,19000,21000,22100], borderColor:'#f59e0b', tension:0.4, pointRadius:3, borderWidth:2 },
+      ]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:true,
+      plugins:{ legend:{ position:'top' } },
+      scales:{
+        x:{ grid:{display:false}, ticks:{font:{size:10}} },
+        y:{ grid:{color:'rgba(255,255,255,0.04)'}, ticks:{callback:v=>v>=1000?(v/1000).toFixed(0)+'K':v} }
+      },
+      interaction:{ mode:'index', intersect:false }
+    }
+  });
+
+  // Category Donut
+  new Chart(document.getElementById('topicCategoryChart'), {
+    type: 'doughnut',
+    data: {
+      labels: ['Technology','Business','Environment','Social','Finance','Other'],
+      datasets:[{ data:[45,20,15,10,6,4], backgroundColor:['#6366f1','#10b981','#f59e0b','#06b6d4','#8b5cf6','#475569'], borderWidth:0, hoverOffset:4 }]
+    },
+    options: { responsive:true, plugins:{ legend:{ position:'bottom', labels:{ padding:10, font:{size:11} } } }, cutout:'60%' }
+  });
+
+  // Topic Sentiment Horizontal Bar
+  new Chart(document.getElementById('topicSentimentChart'), {
+    type: 'bar',
+    data: {
+      labels: ['#AI','#Tech','#DataScience','#Sustainability','#CustomerService'],
+      datasets: [
+        { label:'Positive', data:[78,71,69,81,38], backgroundColor:'rgba(16,185,129,0.7)', borderRadius:4 },
+        { label:'Negative', data:[8,12,11,5,42],   backgroundColor:'rgba(239,68,68,0.7)',  borderRadius:4 },
+      ]
+    },
+    options: {
+      indexAxis:'y', responsive:true,
+      plugins:{ legend:{ position:'top' } },
+      scales:{
+        x:{ grid:{color:'rgba(255,255,255,0.04)'}, ticks:{callback:v=>v+'%'} },
+        y:{ grid:{display:false} }
+      }
+    }
+  });
+</script>
+</body>
+</html>
