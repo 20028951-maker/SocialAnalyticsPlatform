@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Upload Dataset — SSMAP</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <link rel="stylesheet" href="css/style.css" />
+  <style>
+    .upload-layout { display:grid; grid-template-columns:1fr 380px; gap:24px; }
+
+    /* Drop Zone */
+    .drop-zone {
+      border: 2px dashed var(--border);
+      border-radius: var(--radius-lg);
+      padding: 60px 32px;
+      text-align: center;
+      cursor: pointer;
+      transition: var(--transition-slow);
+      background: var(--bg-secondary);
+      position: relative;
+    }
+    .drop-zone:hover, .drop-zone.drag-over {
+      border-color: var(--primary);
+      background: rgba(99,102,241,0.05);
+    }
+    .drop-zone input[type=file] { position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%; }
+    .drop-icon {
+      width: 72px; height: 72px;
+      border-radius: var(--radius-xl);
+      background: rgba(99,102,241,0.12);
+      display: flex; align-items:center; justify-content:center;
+      margin: 0 auto 20px;
+      font-size: 30px; color: var(--primary-light);
+      transition: var(--transition);
+    }
+    .drop-zone:hover .drop-icon { background:rgba(99,102,241,0.2); transform:scale(1.05); }
+    .drop-title { font-size:18px; font-weight:700; margin-bottom:8px; }
+    .drop-sub { font-size:13px; color:var(--text-muted); margin-bottom:20px; }
+    .drop-formats { display:flex; gap:8px; justify-content:center; flex-wrap:wrap; }
+    .format-tag { padding:4px 12px; border-radius:20px; background:var(--bg-card); border:1px solid var(--border); font-size:12px; font-weight:600; color:var(--text-secondary); }
+
+    /* Config Panel */
+    .config-section { margin-bottom:24px; }
+    .config-section-title { font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:.8px; color:var(--text-muted); margin-bottom:14px; padding-bottom:8px; border-bottom:1px solid var(--border); }
+
+    .toggle-row { display:flex; align-items:center; justify-content:space-between; padding:10px 0; border-bottom:1px solid rgba(255,255,255,0.04); }
+    .toggle-label { font-size:13px; color:var(--text-secondary); font-weight:500; }
+    .toggle { position:relative; width:40px; height:22px; display:inline-block; }
+    .toggle input { opacity:0; width:0; height:0; }
+    .toggle-slider { position:absolute; inset:0; background:var(--bg-secondary); border-radius:22px; cursor:pointer; transition:var(--transition); border:1px solid var(--border); }
+    .toggle-slider::before { content:''; position:absolute; width:16px; height:16px; left:2px; top:2px; background:var(--text-muted); border-radius:50%; transition:var(--transition); }
+    .toggle input:checked + .toggle-slider { background:var(--primary); border-color:var(--primary); }
+    .toggle input:checked + .toggle-slider::before { transform:translateX(18px); background:#fff; }
+
+    /* File Queue */
+    .file-queue { display:flex; flex-direction:column; gap:10px; margin-top:16px; }
+    .file-item { display:flex; align-items:center; gap:14px; padding:14px 16px; background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius-md); transition:var(--transition); }
+    .file-item:hover { border-color:var(--border-light); }
+    .file-type-icon { width:42px; height:42px; border-radius:var(--radius-sm); display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0; }
+    .file-info { flex:1; }
+    .file-name { font-size:13px; font-weight:600; color:var(--text-primary); }
+    .file-meta { font-size:11px; color:var(--text-muted); margin-top:3px; }
+    .file-progress { margin-top:8px; }
+    .file-pct { font-size:11px; font-weight:600; margin-bottom:4px; }
+    .file-remove { width:28px; height:28px; border-radius:6px; border:none; background:transparent; color:var(--text-muted); cursor:pointer; font-size:13px; display:flex; align-items:center; justify-content:center; transition:var(--transition); }
+    .file-remove:hover { background:rgba(239,68,68,.15); color:#f87171; }
+
+    /* Processing Steps */
+    .processing-steps { display:flex; flex-direction:column; gap:10px; }
+    .step-item { display:flex; align-items:center; gap:14px; padding:12px 16px; border-radius:var(--radius-sm); background:var(--bg-secondary); border:1px solid var(--border); }
+    .step-num { width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700; flex-shrink:0; }
+    .step-num.done { background:var(--gradient-success); color:#fff; }
+    .step-num.active { background:var(--gradient-primary); color:#fff; animation:stepPulse 1.5s ease-in-out infinite; }
+    .step-num.pending { background:var(--bg-card); color:var(--text-muted); border:1px solid var(--border); }
+    @keyframes stepPulse { 0%,100%{box-shadow:0 0 0 0 rgba(99,102,241,0.4)}50%{box-shadow:0 0 0 8px rgba(99,102,241,0)} }
+    .step-text { flex:1; }
+    .step-title { font-size:13px; font-weight:600; color:var(--text-primary); }
+    .step-desc { font-size:11px; color:var(--text-muted); }
+    .step-status { font-size:12px; font-weight:600; }
+    .step-status.done { color:var(--success); }
+    .step-status.active { color:var(--primary-light); }
+    .step-status.pending { color:var(--text-muted); }
+
+    /* History Table */
+    .history-section { margin-top:24px; }
+
+    @media(max-width:960px){.upload-layout{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+<div class="app-container">
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-icon"><i class="fa-solid fa-chart-network"></i></div>
+      <div><div class="logo-text">SSMAP</div><div class="logo-sub">Analytics Platform</div></div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section-title">Main</div>
+      <a href="dashboard.html" class="nav-item"><i class="fa-solid fa-grid-2"></i> Dashboard</a>
+      <a href="sentiment.html" class="nav-item"><i class="fa-solid fa-face-smile"></i> Sentiment Analysis</a>
+      <a href="trends.html"    class="nav-item"><i class="fa-solid fa-chart-line-up"></i> Trend Prediction</a>
+      <a href="upload.html"    class="nav-item active"><i class="fa-solid fa-cloud-arrow-up"></i> Upload Dataset</a>
+      <a href="reports.html"   class="nav-item"><i class="fa-solid fa-file-chart-column"></i> Reports</a>
+      <div class="nav-section-title" style="margin-top:12px">Analytics</div>
+      <a href="#" class="nav-item"><i class="fa-solid fa-hashtag"></i> Topics <span class="nav-badge">New</span></a>
+      <a href="#" class="nav-item"><i class="fa-solid fa-users"></i> Audience</a>
+      <a href="#" class="nav-item"><i class="fa-solid fa-share-nodes"></i> Platforms</a>
+      <div class="nav-section-title" style="margin-top:12px">System</div>
+      <a href="#" class="nav-item"><i class="fa-solid fa-bell"></i> Alerts <span class="nav-badge">3</span></a>
+      <a href="#" class="nav-item"><i class="fa-solid fa-gear"></i> Settings</a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-card">
+        <div class="user-avatar">AJ</div>
+        <div><div class="user-name">Alex Johnson</div><div class="user-role">Admin</div></div>
+        <i class="fa-solid fa-ellipsis-vertical"></i>
+      </div>
+      <button class="btn btn-secondary btn-block btn-sm" style="margin-top:8px" id="logout-btn">
+        <i class="fa-solid fa-right-from-bracket"></i> Logout
+      </button>
+    </div>
+  </aside>
+
+  <div class="main-content">
+    <div class="topbar">
+      <div>
+        <div class="topbar-title">Upload Dataset</div>
+        <div class="topbar-subtitle">Import and process social media data for analysis</div>
+      </div>
+      <div class="topbar-spacer"></div>
+      <button class="btn btn-secondary btn-sm"><i class="fa-solid fa-plug"></i> Connect API</button>
+      <button class="btn btn-primary btn-sm" onclick="startUpload()"><i class="fa-solid fa-play"></i> Start Processing</button>
+    </div>
+
+    <div class="page-content">
+      <div class="upload-layout">
+        <!-- Left: Upload + Queue -->
+        <div>
+          <!-- Drop Zone -->
+          <div class="drop-zone animate-in" id="dropZone"
+               ondragover="event.preventDefault();this.classList.add('drag-over')"
+               ondragleave="this.classList.remove('drag-over')"
+               ondrop="handleDrop(event)">
+            <input type="file" multiple accept=".csv,.json,.xlsx,.txt,.tsv" onchange="handleFileSelect(event)" />
+            <div class="drop-icon"><i class="fa-solid fa-cloud-arrow-up"></i></div>
+            <div class="drop-title">Drop files here or click to browse</div>
+            <div class="drop-sub">Upload social media datasets for AI-powered sentiment analysis and trend detection</div>
+            <div class="drop-formats">
+              <span class="format-tag">CSV</span>
+              <span class="format-tag">JSON</span>
+              <span class="format-tag">XLSX</span>
+              <span class="format-tag">TSV</span>
+              <span class="format-tag">TXT</span>
+            </div>
+            <div style="margin-top:16px;font-size:12px;color:var(--text-muted)">Max file size: 500MB per file &nbsp;·&nbsp; Max 10 files at once</div>
+          </div>
+
+          <!-- URL Import -->
+          <div class="card animate-in-delay-1" style="margin-top:20px">
+            <div class="card-header">
+              <div class="card-title">Import from URL or API</div>
+              <span class="badge badge-primary">Beta</span>
+            </div>
+            <div class="flex gap-2">
+              <div style="flex:1;position:relative">
+                <i class="fa-solid fa-link" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text-muted)"></i>
+                <input type="text" class="form-control" style="padding-left:36px" placeholder="https://api.example.com/v1/posts or paste dataset URL…" id="url-input" />
+              </div>
+              <button class="btn btn-secondary" onclick="importFromUrl()"><i class="fa-solid fa-download"></i> Import</button>
+            </div>
+            <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap">
+              <button class="btn btn-secondary btn-sm" onclick="showToast('Twitter API connected!','success')"><i class="fa-brands fa-twitter" style="color:#1da1f2"></i> Twitter API</button>
+              <button class="btn btn-secondary btn-sm" onclick="showToast('Facebook API: Set up credentials first','warning')"><i class="fa-brands fa-facebook" style="color:#1877f2"></i> Facebook API</button>
+              <button class="btn btn-secondary btn-sm" onclick="showToast('Reddit API integration coming soon','info')"><i class="fa-brands fa-reddit" style="color:#ff4500"></i> Reddit API</button>
+              <button class="btn btn-secondary btn-sm" onclick="showToast('YouTube Data API connected!','success')"><i class="fa-brands fa-youtube" style="color:#ff0000"></i> YouTube API</button>
+            </div>
+          </div>
+
+          <!-- File Queue -->
+          <div class="animate-in-delay-2" id="queue-section" style="margin-top:24px">
+            <div class="flex items-center justify-between" style="margin-bottom:14px">
+              <h4>Upload Queue <span id="queue-count" style="color:var(--text-muted);font-weight:400">(3 files)</span></h4>
+              <div class="flex gap-2">
+                <button class="btn btn-secondary btn-sm" onclick="clearQueue()"><i class="fa-solid fa-trash"></i> Clear All</button>
+                <button class="btn btn-primary btn-sm" onclick="startUpload()"><i class="fa-solid fa-play"></i> Process All</button>
+              </div>
+            </div>
+            <div class="file-queue" id="file-queue">
+              <!-- Sample Files -->
+              <div class="file-item" id="file-1">
+                <div class="file-type-icon" style="background:rgba(16,185,129,0.15);color:#34d399"><i class="fa-solid fa-file-csv"></i></div>
+                <div class="file-info">
+                  <div class="file-name">twitter_dataset_march2026.csv</div>
+                  <div class="file-meta">142.8 MB · 85,240 rows · CSV</div>
+                  <div class="file-progress" id="progress-1">
+                    <div class="flex items-center justify-between">
+                      <span class="file-pct text-success" id="pct-1">Completed</span>
+                      <span class="text-sm text-muted">85,240 records processed</span>
+                    </div>
+                    <div class="progress-bar"><div class="progress-fill success" style="width:100%"></div></div>
+                  </div>
+                </div>
+                <span class="badge badge-success">Done</span>
+                <button class="file-remove" onclick="removeFile('file-1')"><i class="fa-solid fa-xmark"></i></button>
+              </div>
+
+              <div class="file-item" id="file-2">
+                <div class="file-type-icon" style="background:rgba(6,182,212,0.15);color:#22d3ee"><i class="fa-solid fa-file-code"></i></div>
+                <div class="file-info">
+                  <div class="file-name">facebook_posts_q1.json</div>
+                  <div class="file-meta">89.2 MB · 61,800 records · JSON</div>
+                  <div class="file-progress" id="progress-2">
+                    <div class="flex items-center justify-between">
+                      <span class="file-pct text-primary-c" id="pct-2">Processing… 62%</span>
+                      <span class="text-sm text-muted">ETA: ~1m 40s</span>
+                    </div>
+                    <div class="progress-bar"><div class="progress-fill primary" id="bar-2" style="width:62%"></div></div>
+                  </div>
+                </div>
+                <span class="badge badge-warning">Active</span>
+                <button class="file-remove" onclick="removeFile('file-2')"><i class="fa-solid fa-pause"></i></button>
+              </div>
+
+              <div class="file-item" id="file-3">
+                <div class="file-type-icon" style="background:rgba(99,102,241,0.15);color:#818cf8"><i class="fa-solid fa-file-excel"></i></div>
+                <div class="file-info">
+                  <div class="file-name">instagram_campaign_spring.xlsx</div>
+                  <div class="file-meta">34.5 MB · 28,940 records · XLSX</div>
+                  <div class="file-progress">
+                    <span class="file-pct text-muted">Queued</span>
+                  </div>
+                </div>
+                <span class="badge badge-neutral">Queued</span>
+                <button class="file-remove" onclick="removeFile('file-3')"><i class="fa-solid fa-xmark"></i></button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Upload History -->
+          <div class="card animate-in-delay-3" style="margin-top:24px">
+            <div class="card-header">
+              <div class="card-title">Upload History</div>
+              <a href="#" style="font-size:12px;color:var(--primary-light)">View All</a>
+            </div>
+            <div class="table-wrapper">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Filename</th>
+                    <th>Records</th>
+                    <th>Size</th>
+                    <th>Uploaded</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><i class="fa-solid fa-file-csv" style="color:#34d399;margin-right:8px"></i>twitter_feb2026.csv</td>
+                    <td>72,400</td><td>118 MB</td><td>Feb 28, 2026</td>
+                    <td><span class="badge badge-success">Analyzed</span></td>
+                    <td><a href="sentiment.html" class="btn btn-secondary btn-sm">View Results</a></td>
+                  </tr>
+                  <tr>
+                    <td><i class="fa-solid fa-file-code" style="color:#22d3ee;margin-right:8px"></i>multiplatform_jan.json</td>
+                    <td>192,000</td><td>412 MB</td><td>Jan 31, 2026</td>
+                    <td><span class="badge badge-success">Analyzed</span></td>
+                    <td><a href="reports.html" class="btn btn-secondary btn-sm">View Report</a></td>
+                  </tr>
+                  <tr>
+                    <td><i class="fa-solid fa-file-excel" style="color:#818cf8;margin-right:8px"></i>linkedin_q4_2025.xlsx</td>
+                    <td>18,200</td><td>27 MB</td><td>Dec 31, 2025</td>
+                    <td><span class="badge badge-danger">Failed</span></td>
+                    <td><button class="btn btn-secondary btn-sm" onclick="showToast('Re-uploading…','info')"><i class="fa-solid fa-rotate-right"></i> Retry</button></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Config Panel -->
+        <div>
+          <!-- Analysis Config -->
+          <div class="card animate-in-delay-1" style="margin-bottom:20px">
+            <div class="config-section">
+              <div class="config-section-title">Analysis Configuration</div>
+              <div class="form-group">
+                <label class="form-label">Dataset Name</label>
+                <input type="text" class="form-control" placeholder="e.g. Twitter_March_2026" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Source Platform</label>
+                <select class="form-control">
+                  <option>Auto-detect</option>
+                  <option>Twitter / X</option>
+                  <option>Facebook</option>
+                  <option>Instagram</option>
+                  <option>LinkedIn</option>
+                  <option>Reddit</option>
+                  <option>YouTube</option>
+                  <option>Multi-platform</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Language</label>
+                <select class="form-control">
+                  <option>Auto-detect (recommended)</option>
+                  <option>English</option>
+                  <option>Spanish</option>
+                  <option>French</option>
+                  <option>German</option>
+                  <option>Mandarin</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Analysis Model</label>
+                <select class="form-control">
+                  <option>BERT Large (Best accuracy)</option>
+                  <option>RoBERTa Base (Balanced)</option>
+                  <option>DistilBERT (Fastest)</option>
+                  <option>Custom Fine-tuned</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="config-section">
+              <div class="config-section-title">Analysis Modules</div>
+              <div class="toggle-row">
+                <span class="toggle-label"><i class="fa-solid fa-face-smile" style="color:#10b981;margin-right:6px"></i>Sentiment Analysis</span>
+                <label class="toggle"><input type="checkbox" checked /><span class="toggle-slider"></span></label>
+              </div>
+              <div class="toggle-row">
+                <span class="toggle-label"><i class="fa-solid fa-brain" style="color:#8b5cf6;margin-right:6px"></i>Emotion Detection</span>
+                <label class="toggle"><input type="checkbox" checked /><span class="toggle-slider"></span></label>
+              </div>
+              <div class="toggle-row">
+                <span class="toggle-label"><i class="fa-solid fa-chart-line-up" style="color:#f59e0b;margin-right:6px"></i>Trend Prediction</span>
+                <label class="toggle"><input type="checkbox" checked /><span class="toggle-slider"></span></label>
+              </div>
+              <div class="toggle-row">
+                <span class="toggle-label"><i class="fa-solid fa-hashtag" style="color:#6366f1;margin-right:6px"></i>Topic Extraction</span>
+                <label class="toggle"><input type="checkbox" checked /><span class="toggle-slider"></span></label>
+              </div>
+              <div class="toggle-row">
+                <span class="toggle-label"><i class="fa-solid fa-user-magnifying-glass" style="color:#06b6d4;margin-right:6px"></i>Audience Insights</span>
+                <label class="toggle"><input type="checkbox" /><span class="toggle-slider"></span></label>
+              </div>
+              <div class="toggle-row" style="border:none">
+                <span class="toggle-label"><i class="fa-solid fa-shield-halved" style="color:#ef4444;margin-right:6px"></i>Toxicity Detection</span>
+                <label class="toggle"><input type="checkbox" /><span class="toggle-slider"></span></label>
+              </div>
+            </div>
+
+            <button class="btn btn-primary btn-block" onclick="startUpload()">
+              <i class="fa-solid fa-microchip-ai"></i> Start AI Analysis
+            </button>
+          </div>
+
+          <!-- Processing Steps -->
+          <div class="card animate-in-delay-2">
+            <div class="card-header">
+              <div class="card-title">Processing Pipeline</div>
+              <span class="badge badge-warning">Step 2/5</span>
+            </div>
+            <div class="processing-steps">
+              <div class="step-item">
+                <div class="step-num done"><i class="fa-solid fa-check"></i></div>
+                <div class="step-text">
+                  <div class="step-title">File Validation</div>
+                  <div class="step-desc">Format check, encoding, schema detection</div>
+                </div>
+                <span class="step-status done">Done</span>
+              </div>
+              <div class="step-item">
+                <div class="step-num active">2</div>
+                <div class="step-text">
+                  <div class="step-title">Data Preprocessing</div>
+                  <div class="step-desc">Cleaning, normalization, tokenization</div>
+                </div>
+                <span class="step-status active">62%</span>
+              </div>
+              <div class="step-item">
+                <div class="step-num pending">3</div>
+                <div class="step-text">
+                  <div class="step-title">Sentiment Analysis</div>
+                  <div class="step-desc">BERT model inference on all records</div>
+                </div>
+                <span class="step-status pending">Pending</span>
+              </div>
+              <div class="step-item">
+                <div class="step-num pending">4</div>
+                <div class="step-text">
+                  <div class="step-title">Trend Detection</div>
+                  <div class="step-desc">LSTM forecasting, topic clustering</div>
+                </div>
+                <span class="step-status pending">Pending</span>
+              </div>
+              <div class="step-item">
+                <div class="step-num pending">5</div>
+                <div class="step-text">
+                  <div class="step-title">Report Generation</div>
+                  <div class="step-desc">Charts, summaries, export files</div>
+                </div>
+                <span class="step-status pending">Pending</span>
+              </div>
+            </div>
+
+            <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
+              <div class="flex items-center justify-between text-sm" style="margin-bottom:8px">
+                <span class="text-muted">Overall Progress</span>
+                <span class="font-semibold" id="overall-pct">28%</span>
+              </div>
+              <div class="progress-bar" style="height:10px">
+                <div class="progress-fill primary" id="overall-bar" style="width:28%"></div>
+              </div>
+              <div style="font-size:12px;color:var(--text-muted);margin-top:8px">
+                <i class="fa-regular fa-clock"></i> Estimated time remaining: <strong style="color:var(--text-primary)">~4 min 20s</strong>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="js/app.js"></script>
+<script>
+  Auth.requireAuth();
+
+  let processingInterval = null;
+  let currentProgress = 62;
+
+  function handleFileSelect(event) {
+    const files = event.target.files;
+    if (!files.length) return;
+    addFilesToQueue([...files]);
+  }
+
+  function handleDrop(event) {
+    event.preventDefault();
+    document.getElementById('dropZone').classList.remove('drag-over');
+    const files = [...event.dataTransfer.files];
+    addFilesToQueue(files);
+  }
+
+  function addFilesToQueue(files) {
+    files.forEach(f => {
+      showToast(`"${f.name}" added to queue`, 'success');
+    });
+  }
+
+  function removeFile(id) {
+    const el = document.getElementById(id);
+    if (el) { el.style.opacity='0'; el.style.transform='translateX(20px)'; el.style.transition='0.3s'; setTimeout(()=>el.remove(),300); }
+    showToast('File removed from queue', 'info');
+  }
+
+  function clearQueue() {
+    if (!confirm('Remove all queued files?')) return;
+    document.querySelectorAll('.file-item').forEach(el => el.remove());
+    showToast('Queue cleared', 'info');
+  }
+
+  function importFromUrl() {
+    const url = document.getElementById('url-input').value.trim();
+    if (!url) { showToast('Please enter a valid URL', 'error'); return; }
+    showToast('Fetching dataset from URL…', 'info');
+    setTimeout(() => showToast('Connection timeout. Please check the URL.', 'error'), 2000);
+  }
+
+  function startUpload() {
+    if (processingInterval) return;
+    showToast('AI analysis pipeline started!', 'success');
+    processingInterval = setInterval(() => {
+      currentProgress = Math.min(currentProgress + Math.random() * 3, 100);
+      const bar = document.getElementById('bar-2');
+      const pct = document.getElementById('pct-2');
+      const overall = document.getElementById('overall-bar');
+      const overallPct = document.getElementById('overall-pct');
+      if (bar) bar.style.width = currentProgress + '%';
+      if (pct) pct.textContent = 'Processing… ' + Math.round(currentProgress) + '%';
+      const overallVal = Math.min(28 + (currentProgress - 62) * 0.5, 100);
+      if (overall) overall.style.width = overallVal + '%';
+      if (overallPct) overallPct.textContent = Math.round(overallVal) + '%';
+      if (currentProgress >= 100) {
+        clearInterval(processingInterval);
+        processingInterval = null;
+        if (pct) pct.textContent = 'Completed';
+        if (pct) pct.className = 'file-pct text-success';
+        showToast('facebook_posts_q1.json processed successfully!', 'success');
+        const badge = document.querySelector('#file-2 .badge');
+        if (badge) { badge.textContent = 'Done'; badge.className = 'badge badge-success'; }
+      }
+    }, 300);
+  }
+</script>
+</body>
+</html>

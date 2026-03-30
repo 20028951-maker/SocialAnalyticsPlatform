@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Reports — SSMAP</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <link rel="stylesheet" href="css/style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  <style>
+    .reports-layout { display:grid; grid-template-columns:1fr 340px; gap:24px; }
+
+    .report-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 22px;
+      transition: var(--transition-slow);
+      cursor: pointer;
+    }
+    .report-card:hover { transform:translateY(-2px); box-shadow:var(--shadow-md); border-color:var(--border-light); }
+    .report-card-icon {
+      width: 52px; height: 52px;
+      border-radius: var(--radius-md);
+      display: flex; align-items:center; justify-content:center;
+      font-size: 22px; margin-bottom: 16px;
+    }
+    .report-card-title { font-size:15px; font-weight:700; color:var(--text-primary); margin-bottom:6px; }
+    .report-card-desc { font-size:12px; color:var(--text-muted); line-height:1.6; margin-bottom:16px; }
+    .report-card-meta { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+
+    .template-card {
+      display:flex; align-items:center; gap:14px;
+      padding:14px 16px;
+      background:var(--bg-secondary); border:1px solid var(--border);
+      border-radius:var(--radius-md);
+      cursor:pointer; transition:var(--transition);
+    }
+    .template-card:hover { border-color:var(--primary); background:rgba(99,102,241,0.05); }
+    .template-icon { width:40px; height:40px; border-radius:var(--radius-sm); display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0; }
+    .template-info { flex:1; }
+    .template-name { font-size:13px; font-weight:600; color:var(--text-primary); }
+    .template-desc { font-size:11px; color:var(--text-muted); margin-top:2px; }
+
+    .report-builder { background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius-lg); padding:24px; }
+    .builder-option { display:flex; align-items:center; gap:12px; padding:10px 0; border-bottom:1px solid rgba(255,255,255,0.04); cursor:pointer; }
+    .builder-option:last-child { border:none; }
+    .builder-option input[type=checkbox] { accent-color:var(--primary); width:15px; height:15px; cursor:pointer; }
+    .builder-option label { font-size:13px; color:var(--text-secondary); cursor:pointer; flex:1; }
+    .builder-option i { width:20px; text-align:center; color:var(--text-muted); }
+
+    .schedule-option { display:flex; align-items:center; gap:12px; padding:10px 14px; border-radius:var(--radius-sm); background:var(--bg-card); border:1px solid var(--border); margin-bottom:8px; cursor:pointer; transition:var(--transition); }
+    .schedule-option:hover { border-color:var(--primary); }
+    .schedule-option input[type=radio] { accent-color:var(--primary); }
+
+    .export-btn-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+    .export-format-btn {
+      display:flex; align-items:center; gap:8px; padding:12px 14px;
+      border-radius:var(--radius-sm); border:1px solid var(--border);
+      background:var(--bg-card); color:var(--text-secondary);
+      font-size:13px; font-weight:500; cursor:pointer;
+      font-family:inherit; transition:var(--transition);
+    }
+    .export-format-btn:hover { border-color:var(--primary); color:var(--text-primary); background:rgba(99,102,241,0.05); }
+    .export-format-btn i { font-size:18px; }
+
+    .chart-mini-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:20px; }
+
+    @media(max-width:960px){.reports-layout{grid-template-columns:1fr}.chart-mini-grid{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+<div class="app-container">
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-icon"><i class="fa-solid fa-chart-network"></i></div>
+      <div><div class="logo-text">SSMAP</div><div class="logo-sub">Analytics Platform</div></div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section-title">Main</div>
+      <a href="dashboard.html" class="nav-item"><i class="fa-solid fa-grid-2"></i> Dashboard</a>
+      <a href="sentiment.html" class="nav-item"><i class="fa-solid fa-face-smile"></i> Sentiment Analysis</a>
+      <a href="trends.html"    class="nav-item"><i class="fa-solid fa-chart-line-up"></i> Trend Prediction</a>
+      <a href="upload.html"    class="nav-item"><i class="fa-solid fa-cloud-arrow-up"></i> Upload Dataset</a>
+      <a href="reports.html"   class="nav-item active"><i class="fa-solid fa-file-chart-column"></i> Reports</a>
+      <div class="nav-section-title" style="margin-top:12px">Analytics</div>
+      <a href="#" class="nav-item"><i class="fa-solid fa-hashtag"></i> Topics <span class="nav-badge">New</span></a>
+      <a href="#" class="nav-item"><i class="fa-solid fa-users"></i> Audience</a>
+      <a href="#" class="nav-item"><i class="fa-solid fa-share-nodes"></i> Platforms</a>
+      <div class="nav-section-title" style="margin-top:12px">System</div>
+      <a href="#" class="nav-item"><i class="fa-solid fa-bell"></i> Alerts <span class="nav-badge">3</span></a>
+      <a href="#" class="nav-item"><i class="fa-solid fa-gear"></i> Settings</a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-card">
+        <div class="user-avatar">AJ</div>
+        <div><div class="user-name">Alex Johnson</div><div class="user-role">Admin</div></div>
+        <i class="fa-solid fa-ellipsis-vertical"></i>
+      </div>
+      <button class="btn btn-secondary btn-block btn-sm" style="margin-top:8px" id="logout-btn">
+        <i class="fa-solid fa-right-from-bracket"></i> Logout
+      </button>
+    </div>
+  </aside>
+
+  <div class="main-content">
+    <div class="topbar">
+      <div>
+        <div class="topbar-title">Reports</div>
+        <div class="topbar-subtitle">Generate, export, and schedule analytical reports</div>
+      </div>
+      <div class="topbar-spacer"></div>
+      <div class="search-bar">
+        <i class="fa-solid fa-magnifying-glass"></i>
+        <input type="text" placeholder="Search reports…" />
+      </div>
+      <button class="btn btn-secondary btn-sm"><i class="fa-solid fa-calendar-days"></i> Schedule</button>
+      <button class="btn btn-primary btn-sm" onclick="generateReport()"><i class="fa-solid fa-wand-magic-sparkles"></i> Generate Report</button>
+    </div>
+
+    <div class="page-content">
+      <div class="reports-layout">
+        <!-- Left: Main Report Area -->
+        <div>
+          <!-- Quick Export Cards -->
+          <div class="grid grid-3 animate-in" style="margin-bottom:24px">
+            <div class="report-card">
+              <div class="report-card-icon" style="background:rgba(16,185,129,0.15);color:#34d399"><i class="fa-solid fa-chart-pie"></i></div>
+              <div class="report-card-title">Sentiment Summary</div>
+              <div class="report-card-desc">Complete breakdown of positive, negative, and neutral sentiment across all platforms and time periods.</div>
+              <div class="report-card-meta">
+                <span class="badge badge-success">Ready</span>
+                <span class="text-sm text-muted">Mar 2026</span>
+                <button class="btn btn-primary btn-sm" style="margin-left:auto" onclick="downloadReport('Sentiment Summary')"><i class="fa-solid fa-download"></i> Export</button>
+              </div>
+            </div>
+
+            <div class="report-card">
+              <div class="report-card-icon" style="background:rgba(99,102,241,0.15);color:#818cf8"><i class="fa-solid fa-chart-line-up"></i></div>
+              <div class="report-card-title">Trend Forecast Report</div>
+              <div class="report-card-desc">7-day and 30-day trend predictions with confidence intervals, emerging topics and crisis alerts.</div>
+              <div class="report-card-meta">
+                <span class="badge badge-success">Ready</span>
+                <span class="text-sm text-muted">Q1 2026</span>
+                <button class="btn btn-primary btn-sm" style="margin-left:auto" onclick="downloadReport('Trend Forecast')"><i class="fa-solid fa-download"></i> Export</button>
+              </div>
+            </div>
+
+            <div class="report-card">
+              <div class="report-card-icon" style="background:rgba(245,158,11,0.15);color:#fbbf24"><i class="fa-solid fa-users"></i></div>
+              <div class="report-card-title">Audience Insights</div>
+              <div class="report-card-desc">Demographic breakdown, engagement patterns, top influencers, and behavioral analysis.</div>
+              <div class="report-card-meta">
+                <span class="badge badge-warning">Processing</span>
+                <span class="text-sm text-muted">Mar 2026</span>
+                <button class="btn btn-secondary btn-sm" style="margin-left:auto" disabled>Pending…</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Preview Charts -->
+          <div class="card animate-in-delay-1" style="margin-bottom:20px">
+            <div class="card-header">
+              <div>
+                <div class="card-title">Report Preview — Monthly Summary</div>
+                <div class="card-subtitle">Twitter_Mar2026_Tech · Generated Mar 30, 2026</div>
+              </div>
+              <div class="flex gap-2">
+                <button class="btn btn-secondary btn-sm" onclick="showToast('Opening print preview…','info')"><i class="fa-solid fa-print"></i> Print</button>
+                <button class="btn btn-primary btn-sm" onclick="downloadReport('Monthly Summary')"><i class="fa-solid fa-download"></i> Download</button>
+              </div>
+            </div>
+
+            <!-- Mini KPIs -->
+            <div class="grid grid-4" style="margin-bottom:20px">
+              <div style="text-align:center;padding:16px;background:var(--bg-secondary);border-radius:var(--radius-sm);border:1px solid var(--border)">
+                <div style="font-size:24px;font-weight:800;color:var(--text-primary)" data-count="85240">0</div>
+                <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-top:4px">Total Posts</div>
+              </div>
+              <div style="text-align:center;padding:16px;background:var(--bg-secondary);border-radius:var(--radius-sm);border:1px solid var(--border)">
+                <div style="font-size:24px;font-weight:800;color:#34d399" data-count="71" data-suffix="%">0%</div>
+                <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-top:4px">Positive Rate</div>
+              </div>
+              <div style="text-align:center;padding:16px;background:var(--bg-secondary);border-radius:var(--radius-sm);border:1px solid var(--border)">
+                <div style="font-size:24px;font-weight:800;color:#818cf8" data-count="1842">0</div>
+                <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-top:4px">Topics Found</div>
+              </div>
+              <div style="text-align:center;padding:16px;background:var(--bg-secondary);border-radius:var(--radius-sm);border:1px solid var(--border)">
+                <div style="font-size:24px;font-weight:800;color:#22d3ee" data-count="94" data-suffix="%">0%</div>
+                <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-top:4px">AI Accuracy</div>
+              </div>
+            </div>
+
+            <div class="chart-mini-grid">
+              <div>
+                <div style="font-size:13px;font-weight:600;margin-bottom:12px;color:var(--text-primary)">Sentiment Distribution</div>
+                <canvas id="reportSentimentChart" height="120"></canvas>
+              </div>
+              <div>
+                <div style="font-size:13px;font-weight:600;margin-bottom:12px;color:var(--text-primary)">Daily Post Volume</div>
+                <canvas id="reportVolumeChart" height="120"></canvas>
+              </div>
+            </div>
+          </div>
+
+          <!-- All Reports Table -->
+          <div class="card animate-in-delay-2">
+            <div class="card-header">
+              <div>
+                <div class="card-title">All Reports</div>
+                <div class="card-subtitle">12 reports generated this month</div>
+              </div>
+              <div class="flex gap-2">
+                <select class="form-control" style="width:auto;font-size:12px;padding:6px 12px">
+                  <option>All Types</option>
+                  <option>Sentiment</option>
+                  <option>Trends</option>
+                  <option>Audience</option>
+                </select>
+                <select class="form-control" style="width:auto;font-size:12px;padding:6px 12px">
+                  <option>All Time</option>
+                  <option>This Month</option>
+                  <option>Last Quarter</option>
+                </select>
+              </div>
+            </div>
+            <div class="table-wrapper">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Report Name</th>
+                    <th>Type</th>
+                    <th>Dataset</th>
+                    <th>Records</th>
+                    <th>Generated</th>
+                    <th>Format</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><strong style="color:var(--text-primary)">Monthly Sentiment Report — Mar 2026</strong></td>
+                    <td><span class="badge badge-success">Sentiment</span></td>
+                    <td>Twitter_Mar2026_Tech</td>
+                    <td>85,240</td>
+                    <td>Mar 30, 2026</td>
+                    <td><span class="badge badge-neutral">PDF · CSV</span></td>
+                    <td>
+                      <div class="flex gap-2">
+                        <button class="btn btn-secondary btn-sm" onclick="downloadReport('Monthly Sentiment')"><i class="fa-solid fa-download"></i></button>
+                        <button class="btn btn-secondary btn-sm" onclick="showToast('Opening report…','info')"><i class="fa-solid fa-eye"></i></button>
+                        <button class="btn btn-secondary btn-sm" onclick="showToast('Report shared via email','success')"><i class="fa-solid fa-share"></i></button>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td><strong style="color:var(--text-primary)">Q1 2026 Trend Analysis</strong></td>
+                    <td><span class="badge badge-primary">Trends</span></td>
+                    <td>MultiPlatform_Q1</td>
+                    <td>248,391</td>
+                    <td>Mar 28, 2026</td>
+                    <td><span class="badge badge-neutral">PDF · XLSX</span></td>
+                    <td>
+                      <div class="flex gap-2">
+                        <button class="btn btn-secondary btn-sm" onclick="downloadReport('Q1 Trend')"><i class="fa-solid fa-download"></i></button>
+                        <button class="btn btn-secondary btn-sm" onclick="showToast('Opening report…','info')"><i class="fa-solid fa-eye"></i></button>
+                        <button class="btn btn-secondary btn-sm" onclick="showToast('Report shared via email','success')"><i class="fa-solid fa-share"></i></button>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td><strong style="color:var(--text-primary)">Facebook Brand Sentiment</strong></td>
+                    <td><span class="badge badge-success">Sentiment</span></td>
+                    <td>Facebook_Brand_Q1</td>
+                    <td>61,800</td>
+                    <td>Mar 25, 2026</td>
+                    <td><span class="badge badge-neutral">CSV</span></td>
+                    <td>
+                      <div class="flex gap-2">
+                        <button class="btn btn-secondary btn-sm" onclick="downloadReport('FB Brand')"><i class="fa-solid fa-download"></i></button>
+                        <button class="btn btn-secondary btn-sm" onclick="showToast('Opening report…','info')"><i class="fa-solid fa-eye"></i></button>
+                        <button class="btn btn-secondary btn-sm" onclick="showToast('Report shared via email','success')"><i class="fa-solid fa-share"></i></button>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td><strong style="color:var(--text-primary)">Instagram Spring Campaign Report</strong></td>
+                    <td><span class="badge badge-warning">Audience</span></td>
+                    <td>Instagram_Campaign_Spring</td>
+                    <td>28,940</td>
+                    <td>Mar 22, 2026</td>
+                    <td><span class="badge badge-neutral">PDF</span></td>
+                    <td>
+                      <div class="flex gap-2">
+                        <button class="btn btn-secondary btn-sm" onclick="downloadReport('IG Campaign')"><i class="fa-solid fa-download"></i></button>
+                        <button class="btn btn-secondary btn-sm" onclick="showToast('Opening report…','info')"><i class="fa-solid fa-eye"></i></button>
+                        <button class="btn btn-secondary btn-sm" onclick="showToast('Report shared via email','success')"><i class="fa-solid fa-share"></i></button>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td><strong style="color:var(--text-primary)">Feb 2026 Global Analysis</strong></td>
+                    <td><span class="badge badge-info">Full Report</span></td>
+                    <td>MultiPlatform_Global_Feb</td>
+                    <td>192,000</td>
+                    <td>Feb 28, 2026</td>
+                    <td><span class="badge badge-neutral">PDF · CSV · XLSX</span></td>
+                    <td>
+                      <div class="flex gap-2">
+                        <button class="btn btn-secondary btn-sm" onclick="downloadReport('Feb Global')"><i class="fa-solid fa-download"></i></button>
+                        <button class="btn btn-secondary btn-sm" onclick="showToast('Opening report…','info')"><i class="fa-solid fa-eye"></i></button>
+                        <button class="btn btn-secondary btn-sm" onclick="showToast('Report shared via email','success')"><i class="fa-solid fa-share"></i></button>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="flex items-center justify-between" style="margin-top:16px">
+              <span style="font-size:13px;color:var(--text-muted)">Showing 5 of 12 reports</span>
+              <div class="flex gap-2">
+                <button class="btn btn-secondary btn-sm"><i class="fa-solid fa-chevron-left"></i></button>
+                <button class="btn btn-secondary btn-sm" style="background:rgba(99,102,241,.15);border-color:var(--primary);color:var(--primary-light)">1</button>
+                <button class="btn btn-secondary btn-sm">2</button>
+                <button class="btn btn-secondary btn-sm">3</button>
+                <button class="btn btn-secondary btn-sm"><i class="fa-solid fa-chevron-right"></i></button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Builder Panel -->
+        <div>
+          <!-- Custom Report Builder -->
+          <div class="report-builder animate-in" style="margin-bottom:20px">
+            <h4 style="margin-bottom:6px">Custom Report Builder</h4>
+            <p style="font-size:12px;color:var(--text-muted);margin-bottom:20px">Build a tailored report with the sections you need</p>
+
+            <div class="form-group">
+              <label class="form-label">Report Title</label>
+              <input type="text" class="form-control" placeholder="e.g. Executive Sentiment Briefing" id="report-title" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Dataset</label>
+              <select class="form-control" id="report-dataset">
+                <option>Twitter_Mar2026_Tech</option>
+                <option>Facebook_Brand_Q1</option>
+                <option>Instagram_Campaign_Spring</option>
+                <option>MultiPlatform_Global_Feb</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Date Range</label>
+              <div class="flex gap-2">
+                <input type="date" class="form-control" value="2026-03-01" />
+                <input type="date" class="form-control" value="2026-03-30" />
+              </div>
+            </div>
+
+            <div style="margin-bottom:16px">
+              <label class="form-label">Include Sections</label>
+              <div class="builder-option">
+                <input type="checkbox" id="sec1" checked /><i class="fa-solid fa-chart-pie"></i>
+                <label for="sec1">Sentiment Analysis</label>
+              </div>
+              <div class="builder-option">
+                <input type="checkbox" id="sec2" checked /><i class="fa-solid fa-chart-line-up"></i>
+                <label for="sec2">Trend Forecasting</label>
+              </div>
+              <div class="builder-option">
+                <input type="checkbox" id="sec3" checked /><i class="fa-solid fa-hashtag"></i>
+                <label for="sec3">Top Topics & Keywords</label>
+              </div>
+              <div class="builder-option">
+                <input type="checkbox" id="sec4" /><i class="fa-solid fa-users"></i>
+                <label for="sec4">Audience Demographics</label>
+              </div>
+              <div class="builder-option">
+                <input type="checkbox" id="sec5" checked /><i class="fa-solid fa-share-nodes"></i>
+                <label for="sec5">Platform Comparison</label>
+              </div>
+              <div class="builder-option">
+                <input type="checkbox" id="sec6" /><i class="fa-solid fa-triangle-exclamation"></i>
+                <label for="sec6">Crisis & Alert Summary</label>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Export Format</label>
+              <div class="export-btn-grid">
+                <button class="export-format-btn" id="fmt-pdf" onclick="selectFormat('pdf')">
+                  <i class="fa-solid fa-file-pdf" style="color:#ef4444"></i> PDF
+                </button>
+                <button class="export-format-btn" id="fmt-csv" onclick="selectFormat('csv')">
+                  <i class="fa-solid fa-file-csv" style="color:#10b981"></i> CSV
+                </button>
+                <button class="export-format-btn" id="fmt-xlsx" onclick="selectFormat('xlsx')">
+                  <i class="fa-solid fa-file-excel" style="color:#22c55e"></i> Excel
+                </button>
+                <button class="export-format-btn" id="fmt-json" onclick="selectFormat('json')">
+                  <i class="fa-solid fa-file-code" style="color:#06b6d4"></i> JSON
+                </button>
+              </div>
+            </div>
+
+            <button class="btn btn-primary btn-block" onclick="generateReport()" style="margin-bottom:10px">
+              <i class="fa-solid fa-wand-magic-sparkles"></i> Generate Report
+            </button>
+            <button class="btn btn-secondary btn-block" onclick="showToast('Report preview opened in new tab','info')">
+              <i class="fa-solid fa-eye"></i> Preview First
+            </button>
+          </div>
+
+          <!-- Schedule Reports -->
+          <div class="card animate-in-delay-1" style="margin-bottom:20px">
+            <div class="card-header">
+              <div class="card-title">Schedule Reports</div>
+              <span class="badge badge-success">3 Active</span>
+            </div>
+            <div>
+              <label class="form-label" style="margin-bottom:10px">Frequency</label>
+              <div class="schedule-option">
+                <input type="radio" name="freq" id="daily" />
+                <label for="daily" style="font-size:13px;cursor:pointer"><strong style="color:var(--text-primary)">Daily</strong> — Every morning at 9:00 AM</label>
+              </div>
+              <div class="schedule-option">
+                <input type="radio" name="freq" id="weekly" checked />
+                <label for="weekly" style="font-size:13px;cursor:pointer"><strong style="color:var(--text-primary)">Weekly</strong> — Every Monday at 9:00 AM</label>
+              </div>
+              <div class="schedule-option">
+                <input type="radio" name="freq" id="monthly" />
+                <label for="monthly" style="font-size:13px;cursor:pointer"><strong style="color:var(--text-primary)">Monthly</strong> — First of each month</label>
+              </div>
+            </div>
+            <div class="form-group" style="margin-top:16px">
+              <label class="form-label">Email Recipients</label>
+              <input type="email" class="form-control" placeholder="team@company.com, manager@company.com" />
+            </div>
+            <button class="btn btn-success btn-block" onclick="showToast('Scheduled! Weekly reports will be sent every Monday','success')">
+              <i class="fa-solid fa-calendar-check"></i> Activate Schedule
+            </button>
+          </div>
+
+          <!-- Report Templates -->
+          <div class="card animate-in-delay-2">
+            <div class="card-header">
+              <div class="card-title">Quick Templates</div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <div class="template-card" onclick="applyTemplate('executive')">
+                <div class="template-icon" style="background:rgba(99,102,241,.15);color:#818cf8"><i class="fa-solid fa-user-tie"></i></div>
+                <div class="template-info">
+                  <div class="template-name">Executive Briefing</div>
+                  <div class="template-desc">High-level KPIs, key insights, 1-page summary</div>
+                </div>
+                <i class="fa-solid fa-chevron-right" style="color:var(--text-muted)"></i>
+              </div>
+              <div class="template-card" onclick="applyTemplate('crisis')">
+                <div class="template-icon" style="background:rgba(239,68,68,.15);color:#f87171"><i class="fa-solid fa-shield-exclamation"></i></div>
+                <div class="template-info">
+                  <div class="template-name">Crisis Report</div>
+                  <div class="template-desc">Negative spike analysis, root causes, response plan</div>
+                </div>
+                <i class="fa-solid fa-chevron-right" style="color:var(--text-muted)"></i>
+              </div>
+              <div class="template-card" onclick="applyTemplate('campaign')">
+                <div class="template-icon" style="background:rgba(16,185,129,.15);color:#34d399"><i class="fa-solid fa-bullhorn"></i></div>
+                <div class="template-info">
+                  <div class="template-name">Campaign Analysis</div>
+                  <div class="template-desc">ROI, reach, engagement, sentiment tracking</div>
+                </div>
+                <i class="fa-solid fa-chevron-right" style="color:var(--text-muted)"></i>
+              </div>
+              <div class="template-card" onclick="applyTemplate('competitor')">
+                <div class="template-icon" style="background:rgba(245,158,11,.15);color:#fbbf24"><i class="fa-solid fa-chess"></i></div>
+                <div class="template-info">
+                  <div class="template-name">Competitor Benchmark</div>
+                  <div class="template-desc">Side-by-side comparison with industry benchmarks</div>
+                </div>
+                <i class="fa-solid fa-chevron-right" style="color:var(--text-muted)"></i>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="js/app.js"></script>
+<script>
+  Auth.requireAuth();
+
+  // Sentiment Donut
+  new Chart(document.getElementById('reportSentimentChart'), {
+    type:'doughnut',
+    data:{
+      labels:['Positive','Neutral','Negative'],
+      datasets:[{ data:[71,19,10], backgroundColor:['#10b981','#475569','#ef4444'], borderWidth:0, hoverOffset:4 }]
+    },
+    options:{ responsive:true, plugins:{ legend:{ position:'bottom', labels:{ padding:12 } } }, cutout:'65%' }
+  });
+
+  // Volume Bar
+  const days7 = ['Mar 24','Mar 25','Mar 26','Mar 27','Mar 28','Mar 29','Mar 30'];
+  const vols = [8200,9400,8700,10200,11000,10500,9800];
+  new Chart(document.getElementById('reportVolumeChart'), {
+    type:'bar',
+    data:{
+      labels:days7,
+      datasets:[{
+        data:vols,
+        backgroundColor: vols.map(v => v > 10000 ? 'rgba(99,102,241,0.8)' : 'rgba(99,102,241,0.4)'),
+        borderRadius:4
+      }]
+    },
+    options:{
+      responsive:true,
+      plugins:{legend:{display:false}},
+      scales:{
+        x:{ grid:{display:false}, ticks:{maxRotation:0, font:{size:10}} },
+        y:{ grid:{color:'rgba(255,255,255,0.04)'}, ticks:{callback:v=>v>=1000?(v/1000).toFixed(0)+'K':v} }
+      }
+    }
+  });
+
+  let selectedFormat = 'pdf';
+  function selectFormat(fmt) {
+    selectedFormat = fmt;
+    document.querySelectorAll('.export-format-btn').forEach(b => b.style.borderColor='');
+    const btn = document.getElementById('fmt-' + fmt);
+    if (btn) btn.style.borderColor = 'var(--primary)';
+  }
+  selectFormat('pdf');
+
+  function generateReport() {
+    const title = document.getElementById('report-title').value || 'Analytics Report';
+    const btn = event?.target?.closest('button');
+    showToast('Generating report…', 'info');
+    setTimeout(() => {
+      showToast(`"${title}" ready! Downloading as ${selectedFormat.toUpperCase()}…`, 'success');
+    }, 1800);
+  }
+
+  function downloadReport(name) {
+    showToast(`Downloading "${name}" report…`, 'success');
+  }
+
+  function applyTemplate(type) {
+    const names = { executive:'Executive Briefing', crisis:'Crisis Report', campaign:'Campaign Analysis', competitor:'Competitor Benchmark' };
+    document.getElementById('report-title').value = names[type] + ' — Mar 2026';
+    showToast(`Template "${names[type]}" applied!`, 'success');
+  }
+</script>
+</body>
+</html>

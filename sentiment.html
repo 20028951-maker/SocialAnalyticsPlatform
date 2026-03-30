@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sentiment Analysis — SSMAP</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <link rel="stylesheet" href="css/style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  <style>
+    .sentiment-meter {
+      display: flex; align-items: center; justify-content: center;
+      flex-direction: column; padding: 24px;
+    }
+    .gauge-wrap { position: relative; width: 180px; height: 90px; margin-bottom: 12px; }
+    .gauge-label {
+      position: absolute; bottom: -8px; left: 50%; transform: translateX(-50%);
+      font-size: 28px; font-weight: 800; color: var(--text-primary);
+    }
+    .gauge-sub { font-size: 13px; color: var(--text-muted); text-align: center; }
+
+    .analysis-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; margin-bottom: 24px; }
+    .chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px; }
+    .topics-list { display: flex; flex-direction: column; gap: 12px; }
+    .topic-item { padding: 12px 16px; background: var(--bg-secondary); border-radius: var(--radius-sm); border: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; transition: var(--transition); }
+    .topic-item:hover { border-color: var(--border-light); }
+    .topic-name { font-size: 13px; font-weight: 600; color: var(--text-primary); }
+    .topic-count { font-size: 12px; color: var(--text-muted); }
+
+    .sentiment-filter { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; }
+    .filter-pill {
+      padding: 6px 16px; border-radius: 20px;
+      border: 1px solid var(--border);
+      background: var(--bg-secondary);
+      color: var(--text-secondary);
+      font-size: 12px; font-weight: 500;
+      cursor: pointer; font-family: inherit;
+      transition: var(--transition);
+    }
+    .filter-pill.active { background: rgba(99,102,241,0.15); border-color: var(--primary); color: var(--primary-light); }
+    .filter-pill:hover:not(.active) { border-color: var(--border-light); }
+
+    .post-card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 16px;
+      transition: var(--transition);
+    }
+    .post-card:hover { border-color: var(--border-light); transform: translateY(-1px); }
+    .post-card.positive { border-left: 3px solid var(--success); }
+    .post-card.negative { border-left: 3px solid var(--danger); }
+    .post-card.neutral  { border-left: 3px solid var(--text-muted); }
+
+    .post-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+    .post-avatar { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: #fff; }
+    .post-meta { flex: 1; }
+    .post-username { font-size: 12px; font-weight: 600; color: var(--text-primary); }
+    .post-platform { font-size: 11px; color: var(--text-muted); }
+    .post-text { font-size: 13px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 10px; }
+    .post-footer { display: flex; align-items: center; gap: 12px; }
+    .post-score { font-size: 12px; font-weight: 600; }
+    .post-score.pos { color: var(--success); }
+    .post-score.neg { color: var(--danger); }
+    .post-score.neu { color: var(--text-muted); }
+
+    .emotion-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; }
+    .emotion-item { text-align: center; padding: 14px; background: var(--bg-secondary); border-radius: var(--radius-sm); border: 1px solid var(--border); }
+    .emotion-icon { font-size: 24px; margin-bottom: 6px; display: block; }
+    .emotion-name { font-size: 11px; color: var(--text-muted); font-weight: 500; }
+    .emotion-val { font-size: 16px; font-weight: 700; color: var(--text-primary); }
+
+    @media(max-width:1000px){.analysis-grid{grid-template-columns:1fr 1fr}.chart-grid{grid-template-columns:1fr}}
+    @media(max-width:700px){.analysis-grid{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+<div class="app-container">
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-icon"><i class="fa-solid fa-chart-network"></i></div>
+      <div>
+        <div class="logo-text">SSMAP</div>
+        <div class="logo-sub">Analytics Platform</div>
+      </div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section-title">Main</div>
+      <a href="dashboard.html" class="nav-item"><i class="fa-solid fa-grid-2"></i> Dashboard</a>
+      <a href="sentiment.html" class="nav-item active"><i class="fa-solid fa-face-smile"></i> Sentiment Analysis</a>
+      <a href="trends.html"    class="nav-item"><i class="fa-solid fa-chart-line-up"></i> Trend Prediction</a>
+      <a href="upload.html"    class="nav-item"><i class="fa-solid fa-cloud-arrow-up"></i> Upload Dataset</a>
+      <a href="reports.html"   class="nav-item"><i class="fa-solid fa-file-chart-column"></i> Reports</a>
+      <div class="nav-section-title" style="margin-top:12px">Analytics</div>
+      <a href="#" class="nav-item"><i class="fa-solid fa-hashtag"></i> Topics <span class="nav-badge">New</span></a>
+      <a href="#" class="nav-item"><i class="fa-solid fa-users"></i> Audience</a>
+      <a href="#" class="nav-item"><i class="fa-solid fa-share-nodes"></i> Platforms</a>
+      <div class="nav-section-title" style="margin-top:12px">System</div>
+      <a href="#" class="nav-item"><i class="fa-solid fa-bell"></i> Alerts <span class="nav-badge">3</span></a>
+      <a href="#" class="nav-item"><i class="fa-solid fa-gear"></i> Settings</a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-card">
+        <div class="user-avatar">AJ</div>
+        <div><div class="user-name">Alex Johnson</div><div class="user-role">Admin</div></div>
+        <i class="fa-solid fa-ellipsis-vertical"></i>
+      </div>
+      <button class="btn btn-secondary btn-block btn-sm" style="margin-top:8px" id="logout-btn">
+        <i class="fa-solid fa-right-from-bracket"></i> Logout
+      </button>
+    </div>
+  </aside>
+
+  <div class="main-content">
+    <div class="topbar">
+      <div>
+        <div class="topbar-title">Sentiment Analysis</div>
+        <div class="topbar-subtitle">Deep analysis of emotions, opinions, and attitudes</div>
+      </div>
+      <div class="topbar-spacer"></div>
+      <select class="form-control" style="width:auto;padding:8px 14px;font-size:13px">
+        <option>Twitter_Mar2026_Tech</option>
+        <option>Facebook_Brand_Q1</option>
+        <option>Instagram_Campaign_Spring</option>
+        <option>MultiPlatform_Global_Feb</option>
+      </select>
+      <button class="btn btn-primary btn-sm"><i class="fa-solid fa-rotate"></i> Re-analyze</button>
+      <a href="reports.html" class="topbar-icon-btn" data-tooltip="Export"><i class="fa-solid fa-download"></i></a>
+    </div>
+
+    <div class="page-content">
+      <!-- Summary Cards -->
+      <div class="analysis-grid animate-in">
+        <!-- Overall Score -->
+        <div class="card" style="display:flex;flex-direction:column;align-items:center;text-align:center">
+          <div class="card-title" style="margin-bottom:4px">Overall Score</div>
+          <div class="card-subtitle">Composite sentiment index</div>
+          <div style="position:relative;margin:20px auto;width:160px;height:80px">
+            <canvas id="gaugeChart"></canvas>
+            <div style="position:absolute;bottom:0;left:50%;transform:translateX(-50%);font-size:26px;font-weight:800;color:var(--text-primary)">7.2</div>
+          </div>
+          <div style="font-size:13px;color:var(--success);font-weight:600;margin-top:8px">Mostly Positive</div>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:4px">Based on 85,240 posts</div>
+        </div>
+
+        <!-- Sentiment Breakdown -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Sentiment Breakdown</div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:16px">
+            <div>
+              <div class="flex items-center justify-between text-sm" style="margin-bottom:8px">
+                <span style="display:flex;align-items:center;gap:8px"><i class="fa-solid fa-face-smile" style="color:#10b981"></i> Positive</span>
+                <span class="font-bold text-success" data-count="71" data-suffix="%">0%</span>
+              </div>
+              <div class="progress-bar" style="height:10px"><div class="progress-fill success" data-width="71" style="width:0%"></div></div>
+            </div>
+            <div>
+              <div class="flex items-center justify-between text-sm" style="margin-bottom:8px">
+                <span style="display:flex;align-items:center;gap:8px"><i class="fa-solid fa-face-meh" style="color:#64748b"></i> Neutral</span>
+                <span class="font-bold text-muted" data-count="19" data-suffix="%">0%</span>
+              </div>
+              <div class="progress-bar" style="height:10px"><div class="progress-fill" data-width="19" style="width:0%;background:#475569"></div></div>
+            </div>
+            <div>
+              <div class="flex items-center justify-between text-sm" style="margin-bottom:8px">
+                <span style="display:flex;align-items:center;gap:8px"><i class="fa-solid fa-face-frown" style="color:#ef4444"></i> Negative</span>
+                <span class="font-bold text-danger" data-count="10" data-suffix="%">0%</span>
+              </div>
+              <div class="progress-bar" style="height:10px"><div class="progress-fill danger" data-width="10" style="width:0%"></div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Emotion Detection -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Emotion Detection</div>
+            <span class="badge badge-primary">AI Powered</span>
+          </div>
+          <div class="emotion-grid">
+            <div class="emotion-item">
+              <span class="emotion-icon">😊</span>
+              <div class="emotion-val" data-count="38" data-suffix="%">0%</div>
+              <div class="emotion-name">Joy</div>
+            </div>
+            <div class="emotion-item">
+              <span class="emotion-icon">😡</span>
+              <div class="emotion-val" data-count="8" data-suffix="%">0%</div>
+              <div class="emotion-name">Anger</div>
+            </div>
+            <div class="emotion-item">
+              <span class="emotion-icon">😢</span>
+              <div class="emotion-val" data-count="5" data-suffix="%">0%</div>
+              <div class="emotion-name">Sadness</div>
+            </div>
+            <div class="emotion-item">
+              <span class="emotion-icon">😨</span>
+              <div class="emotion-val" data-count="4" data-suffix="%">0%</div>
+              <div class="emotion-name">Fear</div>
+            </div>
+            <div class="emotion-item">
+              <span class="emotion-icon">😮</span>
+              <div class="emotion-val" data-count="14" data-suffix="%">0%</div>
+              <div class="emotion-name">Surprise</div>
+            </div>
+            <div class="emotion-item">
+              <span class="emotion-icon">😐</span>
+              <div class="emotion-val" data-count="31" data-suffix="%">0%</div>
+              <div class="emotion-name">Neutral</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Charts -->
+      <div class="chart-grid animate-in-delay-1">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Sentiment Over Time</div>
+              <div class="card-subtitle">Hourly sentiment score — last 7 days</div>
+            </div>
+            <div class="tabs">
+              <button class="tab-btn active">7 Days</button>
+              <button class="tab-btn">30 Days</button>
+              <button class="tab-btn">90 Days</button>
+            </div>
+          </div>
+          <canvas id="sentimentTimeChart" height="90"></canvas>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Sentiment by Platform</div>
+            <div class="card-subtitle">Comparative breakdown</div>
+          </div>
+          <canvas id="platformSentimentChart" height="90"></canvas>
+        </div>
+      </div>
+
+      <!-- Filters + Posts -->
+      <div class="card animate-in-delay-2">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Post Analysis</div>
+            <div class="card-subtitle">Classified posts from dataset</div>
+          </div>
+          <div class="flex gap-2">
+            <div class="search-bar" style="min-width:200px">
+              <i class="fa-solid fa-magnifying-glass"></i>
+              <input type="text" placeholder="Search posts…" id="post-search" oninput="filterPosts()" />
+            </div>
+            <select class="form-control" style="width:auto;font-size:12px;padding:6px 12px" id="sort-select">
+              <option>Sort: Recent</option>
+              <option>Sort: Highest Score</option>
+              <option>Sort: Lowest Score</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="sentiment-filter">
+          <button class="filter-pill active" onclick="filterSentiment('all',this)">All Posts <span style="margin-left:4px;opacity:.6">85.2K</span></button>
+          <button class="filter-pill" onclick="filterSentiment('positive',this)"><i class="fa-solid fa-face-smile" style="color:#10b981"></i> Positive 60.5K</button>
+          <button class="filter-pill" onclick="filterSentiment('neutral',this)"><i class="fa-solid fa-face-meh" style="color:#64748b"></i> Neutral 16.2K</button>
+          <button class="filter-pill" onclick="filterSentiment('negative',this)"><i class="fa-solid fa-face-frown" style="color:#ef4444"></i> Negative 8.5K</button>
+          <button class="filter-pill" onclick="filterSentiment('high',this)"><i class="fa-solid fa-arrow-up" style="color:#6366f1"></i> High Confidence</button>
+        </div>
+
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px" id="posts-grid">
+          <div class="post-card positive">
+            <div class="post-header">
+              <div class="post-avatar" style="background:linear-gradient(135deg,#6366f1,#8b5cf6)">KP</div>
+              <div class="post-meta">
+                <div class="post-username">@kevin_parker</div>
+                <div class="post-platform"><i class="fa-brands fa-twitter" style="color:#1da1f2"></i> Twitter · 2h ago</div>
+              </div>
+              <span class="badge badge-success">Positive</span>
+            </div>
+            <div class="post-text">"The new AI features are absolutely game-changing. I've never seen such accurate predictions before! Highly recommend to anyone in the tech space. #AI #Innovation"</div>
+            <div class="post-footer">
+              <span class="post-score pos"><i class="fa-solid fa-circle-check"></i> 96% confidence</span>
+              <span style="margin-left:auto;font-size:11px;color:var(--text-muted)"><i class="fa-solid fa-heart"></i> 234 <i class="fa-solid fa-retweet" style="margin-left:8px"></i> 45</span>
+            </div>
+          </div>
+
+          <div class="post-card negative">
+            <div class="post-header">
+              <div class="post-avatar" style="background:linear-gradient(135deg,#ef4444,#f97316)">ML</div>
+              <div class="post-meta">
+                <div class="post-username">@maya_lim</div>
+                <div class="post-platform"><i class="fa-brands fa-facebook" style="color:#1877f2"></i> Facebook · 4h ago</div>
+              </div>
+              <span class="badge badge-danger">Negative</span>
+            </div>
+            <div class="post-text">"Absolutely disappointed with the latest update. Everything that worked before is now broken. The customer support is non-existent. This is unacceptable."</div>
+            <div class="post-footer">
+              <span class="post-score neg"><i class="fa-solid fa-circle-xmark"></i> 91% confidence</span>
+              <span style="margin-left:auto;font-size:11px;color:var(--text-muted)"><i class="fa-solid fa-thumbs-up"></i> 89 <i class="fa-solid fa-share" style="margin-left:8px"></i> 12</span>
+            </div>
+          </div>
+
+          <div class="post-card positive">
+            <div class="post-header">
+              <div class="post-avatar" style="background:linear-gradient(135deg,#10b981,#059669)">SR</div>
+              <div class="post-meta">
+                <div class="post-username">@sara_r_design</div>
+                <div class="post-platform"><i class="fa-brands fa-instagram" style="color:#e1306c"></i> Instagram · 6h ago</div>
+              </div>
+              <span class="badge badge-success">Positive</span>
+            </div>
+            <div class="post-text">"Loving the new visual design! The color palette is so elegant and the typography is *chef's kiss*. This is how UI should be done 🎨✨"</div>
+            <div class="post-footer">
+              <span class="post-score pos"><i class="fa-solid fa-circle-check"></i> 88% confidence</span>
+              <span style="margin-left:auto;font-size:11px;color:var(--text-muted)"><i class="fa-solid fa-heart"></i> 512 <i class="fa-solid fa-comment" style="margin-left:8px"></i> 24</span>
+            </div>
+          </div>
+
+          <div class="post-card neutral">
+            <div class="post-header">
+              <div class="post-avatar" style="background:linear-gradient(135deg,#64748b,#475569)">JW</div>
+              <div class="post-meta">
+                <div class="post-username">@james_w_tech</div>
+                <div class="post-platform"><i class="fa-brands fa-linkedin" style="color:#0a66c2"></i> LinkedIn · 1d ago</div>
+              </div>
+              <span class="badge badge-neutral">Neutral</span>
+            </div>
+            <div class="post-text">"Reviewed the Q1 product roadmap. The approach is logical and follows industry standards. Implementation timeline seems reasonable for the scope."</div>
+            <div class="post-footer">
+              <span class="post-score neu"><i class="fa-solid fa-circle-minus"></i> 74% confidence</span>
+              <span style="margin-left:auto;font-size:11px;color:var(--text-muted)"><i class="fa-solid fa-thumbs-up"></i> 31 <i class="fa-solid fa-comment" style="margin-left:8px"></i> 7</span>
+            </div>
+          </div>
+
+          <div class="post-card positive">
+            <div class="post-header">
+              <div class="post-avatar" style="background:linear-gradient(135deg,#f59e0b,#d97706)">DP</div>
+              <div class="post-meta">
+                <div class="post-username">@dev_phoenix</div>
+                <div class="post-platform"><i class="fa-brands fa-twitter" style="color:#1da1f2"></i> Twitter · 2d ago</div>
+              </div>
+              <span class="badge badge-success">Positive</span>
+            </div>
+            <div class="post-text">"Just integrated the new API and wow — docs are clear, endpoints are fast, and error messages actually make sense. This is what DX should look like! 🚀 #DevLife"</div>
+            <div class="post-footer">
+              <span class="post-score pos"><i class="fa-solid fa-circle-check"></i> 94% confidence</span>
+              <span style="margin-left:auto;font-size:11px;color:var(--text-muted)"><i class="fa-solid fa-heart"></i> 847 <i class="fa-solid fa-retweet" style="margin-left:8px"></i> 203</span>
+            </div>
+          </div>
+
+          <div class="post-card negative">
+            <div class="post-header">
+              <div class="post-avatar" style="background:linear-gradient(135deg,#8b5cf6,#6366f1)">TK</div>
+              <div class="post-meta">
+                <div class="post-username">@tech_karen99</div>
+                <div class="post-platform"><i class="fa-brands fa-twitter" style="color:#1da1f2"></i> Twitter · 3d ago</div>
+              </div>
+              <span class="badge badge-danger">Negative</span>
+            </div>
+            <div class="post-text">"Third time this week the app crashed mid-session. Lost all my unsaved work again. This is getting ridiculous. My patience is running out completely."</div>
+            <div class="post-footer">
+              <span class="post-score neg"><i class="fa-solid fa-circle-xmark"></i> 97% confidence</span>
+              <span style="margin-left:auto;font-size:11px;color:var(--text-muted)"><i class="fa-solid fa-heart"></i> 156 <i class="fa-solid fa-retweet" style="margin-left:8px"></i> 88</span>
+            </div>
+          </div>
+        </div>
+        <div class="flex items-center justify-between" style="margin-top:20px">
+          <span style="font-size:13px;color:var(--text-muted)">Showing 6 of 85,240 posts</span>
+          <div class="flex gap-2">
+            <button class="btn btn-secondary btn-sm"><i class="fa-solid fa-chevron-left"></i></button>
+            <button class="btn btn-secondary btn-sm" style="background:rgba(99,102,241,0.15);border-color:var(--primary);color:var(--primary-light)">1</button>
+            <button class="btn btn-secondary btn-sm">2</button>
+            <button class="btn btn-secondary btn-sm">3</button>
+            <span style="align-self:center;color:var(--text-muted);font-size:13px">…</span>
+            <button class="btn btn-secondary btn-sm">14208</button>
+            <button class="btn btn-secondary btn-sm"><i class="fa-solid fa-chevron-right"></i></button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="js/app.js"></script>
+<script>
+  Auth.requireAuth();
+
+  // Sentiment Over Time
+  const days = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  const sentColors = ['#10b981','#6366f1','#ef4444'];
+  new Chart(document.getElementById('sentimentTimeChart'), {
+    type: 'line',
+    data: {
+      labels: ['Mar 24','Mar 25','Mar 26','Mar 27','Mar 28','Mar 29','Mar 30'],
+      datasets: [
+        { label:'Positive',  data:[68,71,73,69,72,75,71], borderColor:'#10b981', backgroundColor:'rgba(16,185,129,0.1)', fill:true, tension:0.4, pointRadius:4, borderWidth:2 },
+        { label:'Neutral',   data:[20,18,17,21,18,16,19], borderColor:'#475569', backgroundColor:'transparent', tension:0.4, pointRadius:4, borderWidth:2 },
+        { label:'Negative',  data:[12,11,10,10,10,9,10],  borderColor:'#ef4444', backgroundColor:'rgba(239,68,68,0.05)', fill:true, tension:0.4, pointRadius:4, borderWidth:2 },
+      ]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:true,
+      plugins:{ legend:{ position:'top' } },
+      scales:{
+        x:{ grid:{display:false} },
+        y:{ min:0, max:100, grid:{color:'rgba(255,255,255,0.04)'}, ticks:{callback:v=>v+'%'} }
+      },
+      interaction:{ mode:'index', intersect:false }
+    }
+  });
+
+  // Platform Sentiment Bar
+  new Chart(document.getElementById('platformSentimentChart'), {
+    type: 'bar',
+    data: {
+      labels: ['Twitter','Facebook','Instagram','LinkedIn'],
+      datasets: [
+        { label:'Positive', data:[71,64,79,68], backgroundColor:'rgba(16,185,129,0.7)', borderRadius:4 },
+        { label:'Neutral',  data:[19,21,16,22], backgroundColor:'rgba(71,85,105,0.7)',  borderRadius:4 },
+        { label:'Negative', data:[10,15,5,10],  backgroundColor:'rgba(239,68,68,0.7)',  borderRadius:4 },
+      ]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:true,
+      plugins:{ legend:{position:'top'} },
+      scales:{
+        x:{ grid:{display:false}, stacked:false },
+        y:{ grid:{color:'rgba(255,255,255,0.04)'}, ticks:{callback:v=>v+'%'} }
+      }
+    }
+  });
+
+  // Gauge half-donut
+  new Chart(document.getElementById('gaugeChart'), {
+    type:'doughnut',
+    data:{
+      datasets:[{
+        data:[7.2, 2.8],
+        backgroundColor:['#10b981','rgba(255,255,255,0.04)'],
+        borderWidth:0,
+        circumference:180, rotation:270
+      }]
+    },
+    options:{ plugins:{legend:{display:false},tooltip:{enabled:false}}, cutout:'75%' }
+  });
+
+  function filterSentiment(type, btn) {
+    document.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    const posts = document.querySelectorAll('.post-card');
+    posts.forEach(p => {
+      if (type === 'all' || type === 'high') { p.style.display = ''; return; }
+      p.style.display = p.classList.contains(type) ? '' : 'none';
+    });
+  }
+</script>
+</body>
+</html>
