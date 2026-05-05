@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Alerts — SSMAP</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <link rel="stylesheet" href="css/style.css" />
+  <style>
+    .alerts-layout { display: grid; grid-template-columns: 1fr 340px; gap: 24px; }
+
+    .rule-row { display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-bottom: 1px solid var(--border); transition: var(--transition); }
+    .rule-row:last-child { border-bottom: none; }
+    .rule-row:hover { background: rgba(255,255,255,0.02); }
+    .rule-icon { width: 38px; height: 38px; border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center; font-size: 15px; flex-shrink: 0; }
+    .rule-info { flex: 1; min-width: 0; }
+    .rule-name { font-size: 13px; font-weight: 600; color: var(--text-primary); }
+    .rule-desc { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+    .rule-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+
+    .toggle { position: relative; display: inline-block; width: 38px; height: 20px; }
+    .toggle input { opacity: 0; width: 0; height: 0; }
+    .toggle-slider { position: absolute; cursor: pointer; inset: 0; background: var(--bg-secondary); border: 1px solid var(--border-light); border-radius: 20px; transition: .3s; }
+    .toggle-slider::before { content: ''; position: absolute; width: 14px; height: 14px; left: 2px; top: 2px; background: var(--text-muted); border-radius: 50%; transition: .3s; }
+    .toggle input:checked + .toggle-slider { background: var(--primary); border-color: var(--primary); }
+    .toggle input:checked + .toggle-slider::before { transform: translateX(18px); background: #fff; }
+
+    .notif-item { display: flex; align-items: flex-start; gap: 12px; padding: 14px 0; border-bottom: 1px solid var(--border); cursor: pointer; }
+    .notif-item:last-child { border-bottom: none; }
+    .notif-dot { width: 8px; height: 8px; border-radius: 50%; margin-top: 5px; flex-shrink: 0; }
+    .notif-body { flex: 1; }
+    .notif-title { font-size: 13px; font-weight: 500; color: var(--text-secondary); margin-bottom: 3px; line-height: 1.4; }
+    .notif-item.unread .notif-title { color: var(--text-primary); font-weight: 600; }
+    .notif-meta { font-size: 11px; color: var(--text-muted); display: flex; align-items: center; gap: 8px; }
+
+    .sev-critical { background: rgba(239,68,68,0.15); color: #f87171; }
+    .sev-high     { background: rgba(245,158,11,0.15); color: #fbbf24; }
+    .sev-medium   { background: rgba(99,102,241,0.15); color: #818cf8; }
+    .sev-low      { background: rgba(16,185,129,0.15); color: #34d399; }
+
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.65); backdrop-filter: blur(4px); z-index: 1000; align-items: center; justify-content: center; }
+    .modal-overlay.open { display: flex; }
+    .modal { background: var(--bg-card); border: 1px solid var(--border-light); border-radius: var(--radius-xl); padding: 32px; width: 520px; max-width: 95vw; max-height: 90vh; overflow-y: auto; box-shadow: var(--shadow-lg); animation: modalIn .25s ease; }
+    @keyframes modalIn { from { opacity:0; transform:scale(.95) translateY(10px); } to { opacity:1; transform:none; } }
+    .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
+    .modal-title { font-size: 17px; font-weight: 700; color: var(--text-primary); }
+    .modal-close { background: none; border: none; color: var(--text-muted); font-size: 18px; cursor: pointer; padding: 4px 8px; border-radius: var(--radius-sm); transition: var(--transition); }
+    .modal-close:hover { color: var(--text-primary); background: var(--bg-secondary); }
+
+    .condition-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+    .channel-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .channel-opt { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); cursor: pointer; transition: var(--transition); }
+    .channel-opt:hover { border-color: var(--primary); background: rgba(99,102,241,.05); }
+    .channel-opt input { accent-color: var(--primary); }
+
+    .stats-strip { display: grid; grid-template-columns: repeat(4,1fr); gap: 16px; margin-bottom: 24px; }
+
+    @media(max-width:960px) { .alerts-layout { grid-template-columns: 1fr; } .stats-strip { grid-template-columns: repeat(2,1fr); } }
+    @media(max-width:600px) { .stats-strip { grid-template-columns: 1fr 1fr; } .condition-row { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+<div class="app-container">
+
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-icon"><i class="fa-solid fa-chart-network"></i></div>
+      <div><div class="logo-text">SSMAP</div><div class="logo-sub">Analytics Platform</div></div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section-title">Main</div>
+      <a href="dashboard.html" class="nav-item"><i class="fa-solid fa-grid-2"></i> Dashboard</a>
+      <a href="sentiment.html" class="nav-item"><i class="fa-solid fa-face-smile"></i> Sentiment Analysis</a>
+      <a href="trends.html"    class="nav-item"><i class="fa-solid fa-chart-line-up"></i> Trend Prediction</a>
+      <a href="upload.html"    class="nav-item"><i class="fa-solid fa-cloud-arrow-up"></i> Upload Dataset</a>
+      <a href="reports.html"   class="nav-item"><i class="fa-solid fa-file-chart-column"></i> Reports</a>
+      <div class="nav-section-title" style="margin-top:12px">Analytics</div>
+      <a href="topics.html"   class="nav-item"><i class="fa-solid fa-hashtag"></i> Topics <span class="nav-badge">New</span></a>
+      <a href="audience.html" class="nav-item"><i class="fa-solid fa-users"></i> Audience</a>
+      <a href="platforms.html" class="nav-item"><i class="fa-solid fa-share-nodes"></i> Platforms</a>
+      <div class="nav-section-title" style="margin-top:12px">System</div>
+      <a href="alerts.html"   class="nav-item active"><i class="fa-solid fa-bell"></i> Alerts <span class="nav-badge" id="sidebar-badge">3</span></a>
+      <a href="settings.html" class="nav-item"><i class="fa-solid fa-gear"></i> Settings</a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-card">
+        <div class="user-avatar">AJ</div>
+        <div><div class="user-name">Alex Johnson</div><div class="user-role">Admin</div></div>
+        <i class="fa-solid fa-ellipsis-vertical"></i>
+      </div>
+      <button class="btn btn-secondary btn-block btn-sm" style="margin-top:8px" id="logout-btn">
+        <i class="fa-solid fa-right-from-bracket"></i> Logout
+      </button>
+    </div>
+  </aside>
+
+  <div class="main-content">
+    <div class="topbar">
+      <div>
+        <div class="topbar-title">Alerts</div>
+        <div class="topbar-subtitle">Monitor triggers and manage notification rules</div>
+      </div>
+      <div class="topbar-spacer"></div>
+      <div class="search-bar">
+        <i class="fa-solid fa-magnifying-glass"></i>
+        <input type="text" placeholder="Search alerts…" id="alert-search" oninput="filterAlerts()" />
+      </div>
+      <button class="btn btn-secondary btn-sm" onclick="markAllRead()"><i class="fa-solid fa-check-double"></i> Mark All Read</button>
+      <button class="btn btn-primary btn-sm" onclick="openCreateModal()"><i class="fa-solid fa-plus"></i> New Alert Rule</button>
+    </div>
+
+    <div class="page-content">
+
+      <!-- Stats Strip -->
+      <div class="stats-strip animate-in">
+        <div class="stat-card danger">
+          <div class="stat-icon danger"><i class="fa-solid fa-circle-exclamation"></i></div>
+          <div class="stat-content">
+            <div class="stat-value" id="unread-stat" data-count="3">0</div>
+            <div class="stat-label">Unread</div>
+            <div class="stat-change up"><i class="fa-solid fa-arrow-up"></i> 2 since yesterday</div>
+          </div>
+        </div>
+        <div class="stat-card warning">
+          <div class="stat-icon warning"><i class="fa-solid fa-bell-ring"></i></div>
+          <div class="stat-content">
+            <div class="stat-value" data-count="12">0</div>
+            <div class="stat-label">Fired Today</div>
+            <div class="stat-change down"><i class="fa-solid fa-arrow-down"></i> 4 fewer than avg</div>
+          </div>
+        </div>
+        <div class="stat-card success">
+          <div class="stat-icon success"><i class="fa-solid fa-shield-check"></i></div>
+          <div class="stat-content">
+            <div class="stat-value" data-count="8">0</div>
+            <div class="stat-label">Active Rules</div>
+            <div class="stat-change up"><i class="fa-solid fa-arrow-up"></i> 1 added this week</div>
+          </div>
+        </div>
+        <div class="stat-card primary">
+          <div class="stat-icon primary"><i class="fa-solid fa-clock-rotate-left"></i></div>
+          <div class="stat-content">
+            <div class="stat-value" data-count="94" data-suffix="%">0%</div>
+            <div class="stat-label">Delivery Rate</div>
+            <div class="stat-change up"><i class="fa-solid fa-arrow-up"></i> 2% vs last week</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="alerts-layout">
+        <div>
+          <!-- Alert Rules -->
+          <div class="card animate-in" style="margin-bottom:24px">
+            <div class="card-header">
+              <div>
+                <div class="card-title">Alert Rules</div>
+                <div class="card-subtitle">8 rules configured</div>
+              </div>
+              <div class="flex gap-2">
+                <select class="form-control" style="width:auto;font-size:12px;padding:6px 12px" onchange="filterRules(this.value)">
+                  <option value="">All Types</option>
+                  <option value="sentiment">Sentiment</option>
+                  <option value="volume">Volume</option>
+                  <option value="keyword">Keyword</option>
+                  <option value="crisis">Crisis</option>
+                </select>
+                <button class="btn btn-secondary btn-sm" onclick="openCreateModal()"><i class="fa-solid fa-plus"></i> Add</button>
+              </div>
+            </div>
+            <div id="rules-list"></div>
+          </div>
+
+          <!-- Notification Feed -->
+          <div class="card animate-in-delay-1">
+            <div class="card-header">
+              <div>
+                <div class="card-title">Notification Feed</div>
+                <div class="card-subtitle" id="unread-label">3 unread notifications</div>
+              </div>
+              <div class="flex gap-2">
+                <select class="form-control" style="width:auto;font-size:12px;padding:6px 12px" onchange="filterFeed(this.value)">
+                  <option value="">All</option>
+                  <option value="critical">Critical</option>
+                  <option value="high">High</option>
+                  <option value="medium">Medium</option>
+                  <option value="low">Low</option>
+                </select>
+                <button class="btn btn-secondary btn-sm" onclick="markAllRead()"><i class="fa-solid fa-check-double"></i></button>
+              </div>
+            </div>
+            <div id="notifications-feed"></div>
+            <div style="text-align:center;margin-top:16px">
+              <button class="btn btn-secondary btn-sm" onclick="showToast('Loading more notifications…','info')"><i class="fa-solid fa-chevron-down"></i> Load More</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Panel -->
+        <div>
+          <div class="card animate-in" style="margin-bottom:20px">
+            <div class="card-title" style="margin-bottom:16px">Quick Actions</div>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <button class="btn btn-danger btn-block" onclick="triggerTest()"><i class="fa-solid fa-flask"></i> Test Critical Alert</button>
+              <button class="btn btn-secondary btn-block" onclick="showToast('All alerts snoozed for 1 hour','info')"><i class="fa-solid fa-bell-slash"></i> Snooze All (1 hr)</button>
+              <button class="btn btn-secondary btn-block" onclick="showToast('Alert log exported!','success')"><i class="fa-solid fa-download"></i> Export Alert Log</button>
+            </div>
+          </div>
+
+          <div class="card animate-in-delay-1" style="margin-bottom:20px">
+            <div class="card-header">
+              <div class="card-title">Alert Health</div>
+              <span class="badge badge-success"><i class="fa-solid fa-circle" style="font-size:7px"></i> Healthy</span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:14px">
+              <div>
+                <div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="font-size:12px;color:var(--text-secondary)">Email delivery</span><span style="font-size:12px;font-weight:600;color:var(--text-primary)">98%</span></div>
+                <div class="progress-bar"><div class="progress-fill success" data-width="98" style="width:0"></div></div>
+              </div>
+              <div>
+                <div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="font-size:12px;color:var(--text-secondary)">Slack delivery</span><span style="font-size:12px;font-weight:600;color:var(--text-primary)">91%</span></div>
+                <div class="progress-bar"><div class="progress-fill primary" data-width="91" style="width:0"></div></div>
+              </div>
+              <div>
+                <div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="font-size:12px;color:var(--text-secondary)">Webhook calls</span><span style="font-size:12px;font-weight:600;color:var(--text-primary)">87%</span></div>
+                <div class="progress-bar"><div class="progress-fill warning" data-width="87" style="width:0"></div></div>
+              </div>
+              <div>
+                <div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="font-size:12px;color:var(--text-secondary)">False positive rate</span><span style="font-size:12px;font-weight:600;color:#34d399">4%</span></div>
+                <div class="progress-bar"><div class="progress-fill danger" data-width="4" style="width:0"></div></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card animate-in-delay-2">
+            <div class="card-title" style="margin-bottom:16px">Recent Activity</div>
+            <div style="display:flex;flex-direction:column;gap:12px">
+              <div style="display:flex;gap:10px;align-items:flex-start">
+                <div style="width:32px;height:32px;border-radius:50%;background:rgba(239,68,68,.15);display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="fa-solid fa-circle-exclamation" style="color:#f87171;font-size:13px"></i></div>
+                <div><div style="font-size:12px;font-weight:600;color:var(--text-primary)">Sentiment Spike Detected</div><div style="font-size:11px;color:var(--text-muted)">Twitter · 2 min ago</div></div>
+              </div>
+              <div style="display:flex;gap:10px;align-items:flex-start">
+                <div style="width:32px;height:32px;border-radius:50%;background:rgba(245,158,11,.15);display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="fa-solid fa-hashtag" style="color:#fbbf24;font-size:13px"></i></div>
+                <div><div style="font-size:12px;font-weight:600;color:var(--text-primary)">"AI regulation" trending</div><div style="font-size:11px;color:var(--text-muted)">Reddit · 18 min ago</div></div>
+              </div>
+              <div style="display:flex;gap:10px;align-items:flex-start">
+                <div style="width:32px;height:32px;border-radius:50%;background:rgba(16,185,129,.15);display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="fa-solid fa-check" style="color:#34d399;font-size:13px"></i></div>
+                <div><div style="font-size:12px;font-weight:600;color:var(--text-primary)">Rule "Positive Surge" fired</div><div style="font-size:11px;color:var(--text-muted)">YouTube · 1 hr ago</div></div>
+              </div>
+              <div style="display:flex;gap:10px;align-items:flex-start">
+                <div style="width:32px;height:32px;border-radius:50%;background:rgba(99,102,241,.15);display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="fa-solid fa-user-plus" style="color:#818cf8;font-size:13px"></i></div>
+                <div><div style="font-size:12px;font-weight:600;color:var(--text-primary)">New alert rule created</div><div style="font-size:11px;color:var(--text-muted)">By Sarah Chen · 3 hr ago</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Create Alert Modal -->
+<div class="modal-overlay" id="create-modal" onclick="handleOverlayClick(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title"><i class="fa-solid fa-bell" style="color:var(--primary);margin-right:10px"></i>Create Alert Rule</div>
+      <button class="modal-close" onclick="closeModal()"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Rule Name <span style="color:var(--danger)">*</span></label>
+      <input type="text" class="form-control" id="rule-name" placeholder="e.g. Negative Sentiment Spike" />
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Alert Type</label>
+      <select class="form-control" id="rule-type">
+        <option value="sentiment">Sentiment Threshold</option>
+        <option value="volume">Volume Anomaly</option>
+        <option value="keyword">Keyword Match</option>
+        <option value="crisis">Crisis Detection</option>
+        <option value="engagement">Engagement Drop</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Condition</label>
+      <div class="condition-row">
+        <select class="form-control">
+          <option>Negative %</option>
+          <option>Positive %</option>
+          <option>Post Volume</option>
+          <option>Engagement Rate</option>
+          <option>Keyword Count</option>
+        </select>
+        <select class="form-control">
+          <option>exceeds</option>
+          <option>drops below</option>
+          <option>changes by</option>
+        </select>
+        <input type="number" class="form-control" placeholder="30" value="30" />
+      </div>
+      <div style="font-size:11px;color:var(--text-muted);margin-top:6px"><i class="fa-solid fa-circle-info"></i> Alert fires when the condition is met</div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Severity</label>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px" id="sev-grid">
+        <div class="badge sev-low"      style="justify-content:center;padding:8px 0;cursor:pointer" onclick="selectSev('low')">Low</div>
+        <div class="badge sev-medium"   style="justify-content:center;padding:8px 0;cursor:pointer" onclick="selectSev('medium')">Medium</div>
+        <div class="badge sev-high"     style="justify-content:center;padding:8px 0;cursor:pointer;outline:2px solid #fbbf24" id="sev-active" onclick="selectSev('high')">High</div>
+        <div class="badge sev-critical" style="justify-content:center;padding:8px 0;cursor:pointer" onclick="selectSev('critical')">Critical</div>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Platforms</label>
+      <div style="display:flex;flex-wrap:wrap;gap:8px">
+        <label style="cursor:pointer;display:flex;align-items:center;gap:6px;padding:6px 12px;border:1px solid var(--border);border-radius:20px;font-size:12px;color:var(--text-secondary)">
+          <input type="checkbox" checked style="accent-color:var(--primary)"> All Platforms
+        </label>
+        <label style="cursor:pointer;display:flex;align-items:center;gap:6px;padding:6px 12px;border:1px solid var(--border);border-radius:20px;font-size:12px;color:var(--text-secondary)">
+          <input type="checkbox" style="accent-color:var(--primary)"> <i class="fa-brands fa-twitter" style="color:#1da1f2"></i> Twitter
+        </label>
+        <label style="cursor:pointer;display:flex;align-items:center;gap:6px;padding:6px 12px;border:1px solid var(--border);border-radius:20px;font-size:12px;color:var(--text-secondary)">
+          <input type="checkbox" style="accent-color:var(--primary)"> <i class="fa-brands fa-reddit" style="color:#ff4500"></i> Reddit
+        </label>
+        <label style="cursor:pointer;display:flex;align-items:center;gap:6px;padding:6px 12px;border:1px solid var(--border);border-radius:20px;font-size:12px;color:var(--text-secondary)">
+          <input type="checkbox" style="accent-color:var(--primary)"> <i class="fa-brands fa-youtube" style="color:#ff0000"></i> YouTube
+        </label>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Notify via</label>
+      <div class="channel-grid">
+        <div class="channel-opt"><input type="checkbox" id="ch-email" checked style="accent-color:var(--primary)"><i class="fa-solid fa-envelope" style="color:var(--primary-light)"></i><label for="ch-email" style="font-size:13px;cursor:pointer">Email</label></div>
+        <div class="channel-opt"><input type="checkbox" id="ch-slack" style="accent-color:var(--primary)"><i class="fa-brands fa-slack" style="color:#611f69"></i><label for="ch-slack" style="font-size:13px;cursor:pointer">Slack</label></div>
+        <div class="channel-opt"><input type="checkbox" id="ch-webhook" style="accent-color:var(--primary)"><i class="fa-solid fa-code" style="color:var(--info)"></i><label for="ch-webhook" style="font-size:13px;cursor:pointer">Webhook</label></div>
+        <div class="channel-opt"><input type="checkbox" id="ch-push" style="accent-color:var(--primary)"><i class="fa-solid fa-mobile-screen" style="color:#34d399"></i><label for="ch-push" style="font-size:13px;cursor:pointer">Push Notif</label></div>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Cooldown Period</label>
+      <select class="form-control">
+        <option>No cooldown</option>
+        <option selected>15 minutes</option>
+        <option>30 minutes</option>
+        <option>1 hour</option>
+        <option>4 hours</option>
+        <option>24 hours</option>
+      </select>
+    </div>
+
+    <div style="display:flex;gap:10px;margin-top:8px">
+      <button class="btn btn-secondary" style="flex:1" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" style="flex:2" onclick="saveRule()"><i class="fa-solid fa-bell-plus"></i> Create Alert Rule</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/app.js"></script>
+<script>
+Auth.requireAuth();
+
+/* ─── Data ─── */
+const RULES = [
+  { id:1, name:'Negative Sentiment Spike', desc:'Negative % exceeds 40% · All Platforms', type:'sentiment', icon:'fa-face-angry', iconBg:'rgba(239,68,68,.15)', iconColor:'#f87171', sev:'critical', active:true },
+  { id:2, name:'Volume Anomaly Detection', desc:'Post volume drops below 500 in 1h · Twitter', type:'volume', icon:'fa-chart-bar', iconBg:'rgba(245,158,11,.15)', iconColor:'#fbbf24', sev:'high', active:true },
+  { id:3, name:'Crisis Keyword Watch', desc:'Keywords: "outrage", "boycott", "scandal" · All', type:'keyword', icon:'fa-triangle-exclamation', iconBg:'rgba(239,68,68,.15)', iconColor:'#f87171', sev:'critical', active:true },
+  { id:4, name:'Positive Surge Alert', desc:'Positive % exceeds 80% · All Platforms', type:'sentiment', icon:'fa-face-laugh-beam', iconBg:'rgba(16,185,129,.15)', iconColor:'#34d399', sev:'low', active:true },
+  { id:5, name:'Engagement Rate Drop', desc:'Engagement drops below 2% · Instagram', type:'engagement', icon:'fa-heart-crack', iconBg:'rgba(99,102,241,.15)', iconColor:'#818cf8', sev:'medium', active:true },
+  { id:6, name:'Brand Mention Spike', desc:'Mentions increase 200%+ in 30 min', type:'volume', icon:'fa-at', iconBg:'rgba(6,182,212,.15)', iconColor:'#22d3ee', sev:'high', active:true },
+  { id:7, name:'Competitor Mention Alert', desc:'Keywords: competitor brand names · All', type:'keyword', icon:'fa-chess', iconBg:'rgba(245,158,11,.15)',iconColor:'#fbbf24', sev:'medium', active:false },
+  { id:8, name:'Daily Summary Report', desc:'Sends digest at 9:00 AM every day', type:'crisis', icon:'fa-calendar-day', iconBg:'rgba(99,102,241,.15)', iconColor:'#818cf8', sev:'low', active:true },
+];
+
+const SEV_COLOR = { critical:'#f87171', high:'#fbbf24', medium:'#818cf8', low:'#34d399' };
+const SEV_CLASS = { critical:'badge-danger', high:'badge-warning', medium:'badge-primary', low:'badge-success' };
+
+const NOTIFICATIONS = [
+  { id:1, sev:'critical', title:'🚨 Critical: Negative sentiment hit 47% on Twitter — "AI regulation" thread going viral', time:'2 min ago', platform:'Twitter', unread:true },
+  { id:2, sev:'high', title:'⚠️ Volume Drop: Post volume fell to 312/hr on Reddit (threshold: 500)', time:'14 min ago', platform:'Reddit', unread:true },
+  { id:3, sev:'critical', title:'🚨 Crisis keyword "boycott" detected — 1,240 mentions in the last 30 min', time:'31 min ago', platform:'All', unread:true },
+  { id:4, sev:'medium', title:'ℹ️ Engagement rate dipped to 1.8% on Instagram — below 2% threshold', time:'1 hr ago', platform:'Instagram', unread:false },
+  { id:5, sev:'low', title:'✅ Positive surge: sentiment climbed to 82% on YouTube after product launch', time:'2 hr ago', platform:'YouTube', unread:false },
+  { id:6, sev:'high', title:'⚠️ Brand mention spike: 340% increase detected in the last 45 minutes', time:'3 hr ago', platform:'Twitter', unread:false },
+  { id:7, sev:'low', title:'📋 Daily digest: 85,240 posts processed · 71% positive · 12 alerts fired', time:'9 hr ago', platform:'All', unread:false },
+];
+
+let currentSev = 'high';
+let allRules = [...RULES];
+let allNotifs = [...NOTIFICATIONS];
+
+/* ─── Render Rules ─── */
+function renderRules(data) {
+  const container = document.getElementById('rules-list');
+  if (!data.length) { container.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text-muted)">No rules found</div>'; return; }
+  container.innerHTML = data.map(r => `
+    <div class="rule-row" id="rule-${r.id}">
+      <div class="rule-icon" style="background:${r.iconBg};color:${r.iconColor}"><i class="fa-solid ${r.icon}"></i></div>
+      <div class="rule-info">
+        <div class="rule-name">${r.name}</div>
+        <div class="rule-desc">${r.desc}</div>
+      </div>
+      <span class="badge ${SEV_CLASS[r.sev]}">${r.sev}</span>
+      <div class="rule-actions">
+        <label class="toggle"><input type="checkbox" ${r.active ? 'checked' : ''} onchange="toggleRule(${r.id}, this.checked)"><span class="toggle-slider"></span></label>
+        <button class="btn btn-secondary btn-sm" onclick="showToast('Edit coming soon…','info')"><i class="fa-solid fa-pen"></i></button>
+        <button class="btn btn-danger btn-sm" onclick="deleteRule(${r.id})"><i class="fa-solid fa-trash"></i></button>
+      </div>
+    </div>
+  `).join('');
+}
+
+/* ─── Render Feed ─── */
+function renderFeed(data) {
+  const container = document.getElementById('notifications-feed');
+  if (!data.length) { container.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text-muted)">No notifications</div>'; return; }
+  container.innerHTML = data.map(n => `
+    <div class="notif-item ${n.unread ? 'unread' : ''}" onclick="readNotif(${n.id})">
+      <div class="notif-dot" style="background:${SEV_COLOR[n.sev]}"></div>
+      <div class="notif-body">
+        <div class="notif-title">${n.title}</div>
+        <div class="notif-meta">
+          <span class="badge ${SEV_CLASS[n.sev]}">${n.sev}</span>
+          <span>${n.platform}</span>
+          <span>·</span>
+          <span>${n.time}</span>
+        </div>
+      </div>
+      ${n.unread ? '<div style="width:8px;height:8px;border-radius:50%;background:var(--primary);flex-shrink:0;margin-top:4px"></div>' : ''}
+    </div>
+  `).join('');
+  updateUnreadCount();
+}
+
+function updateUnreadCount() {
+  const count = allNotifs.filter(n => n.unread).length;
+  document.getElementById('unread-label').textContent = count ? `${count} unread notification${count > 1 ? 's' : ''}` : 'All caught up!';
+  const badge = document.getElementById('sidebar-badge');
+  if (badge) badge.textContent = count || '';
+}
+
+function readNotif(id) {
+  const n = allNotifs.find(x => x.id === id);
+  if (n) { n.unread = false; renderFeed(allNotifs); }
+}
+
+function markAllRead() {
+  allNotifs.forEach(n => n.unread = false);
+  renderFeed(allNotifs);
+  showToast('All notifications marked as read', 'success');
+}
+
+function filterFeed(sev) {
+  renderFeed(sev ? allNotifs.filter(n => n.sev === sev) : allNotifs);
+}
+
+function filterRules(type) {
+  renderRules(type ? allRules.filter(r => r.type === type) : allRules);
+}
+
+function filterAlerts() {
+  const q = document.getElementById('alert-search').value.toLowerCase();
+  renderRules(allRules.filter(r => r.name.toLowerCase().includes(q) || r.desc.toLowerCase().includes(q)));
+}
+
+function toggleRule(id, enabled) {
+  const r = allRules.find(x => x.id === id);
+  if (r) { r.active = enabled; showToast(`Rule "${r.name}" ${enabled ? 'enabled' : 'disabled'}`, enabled ? 'success' : 'info'); }
+}
+
+function deleteRule(id) {
+  const r = allRules.find(x => x.id === id);
+  if (!r) return;
+  allRules = allRules.filter(x => x.id !== id);
+  renderRules(allRules);
+  showToast(`Rule "${r.name}" deleted`, 'info');
+}
+
+/* ─── Modal ─── */
+function openCreateModal() {
+  document.getElementById('create-modal').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeModal() {
+  document.getElementById('create-modal').classList.remove('open');
+  document.body.style.overflow = '';
+}
+function handleOverlayClick(e) {
+  if (e.target === document.getElementById('create-modal')) closeModal();
+}
+
+function selectSev(sev) {
+  currentSev = sev;
+  document.querySelectorAll('#sev-grid .badge').forEach(el => el.style.outline = 'none');
+  const el = document.querySelector(`#sev-grid [onclick="selectSev('${sev}')"]`);
+  if (el) el.style.outline = `2px solid ${SEV_COLOR[sev]}`;
+}
+
+function saveRule() {
+  const name = document.getElementById('rule-name').value.trim();
+  if (!name) { showToast('Please enter a rule name', 'error'); return; }
+  const type = document.getElementById('rule-type').value;
+  const typeLabels = { sentiment:'Sentiment Threshold', volume:'Volume Anomaly', keyword:'Keyword Match', crisis:'Crisis Detection', engagement:'Engagement Drop' };
+  const newRule = {
+    id: Date.now(), name, desc: `${typeLabels[type]} · All Platforms`,
+    type, icon: 'fa-bell', iconBg: 'rgba(99,102,241,.15)', iconColor: '#818cf8',
+    sev: currentSev, active: true
+  };
+  allRules.unshift(newRule);
+  renderRules(allRules);
+  closeModal();
+  showToast(`Alert rule "${name}" created!`, 'success');
+  document.getElementById('rule-name').value = '';
+}
+
+function triggerTest() {
+  showToast('Sending test critical alert…', 'warning');
+  setTimeout(() => showToast('Test alert delivered to all channels!', 'success'), 1500);
+}
+
+/* ─── Init ─── */
+document.addEventListener('DOMContentLoaded', () => {
+  renderRules(allRules);
+  renderFeed(allNotifs);
+});
+</script>
+</body>
+</html>

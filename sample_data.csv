@@ -1,0 +1,7 @@
+post_id,platform,author,posted_at,text,sentiment,engagements,followers
+1001,Twitter,@kevin_p,2026-03-30T09:14:00Z,"Loving the new analytics dashboard. The sentiment breakdown is finally useful.",positive,428,12400
+1002,Reddit,u/datawatcher,2026-03-30T09:27:00Z,"Is anyone else worried about the privacy wording in the latest update?",negative,312,8700
+1003,YouTube,@LaunchLab,2026-03-30T10:02:00Z,"The product launch stream answered most of our team questions.",positive,890,45500
+1004,Instagram,@brandpulse,2026-03-30T10:46:00Z,"Campaign visuals are strong, but comments keep asking about pricing.",neutral,256,18300
+1005,LinkedIn,@sarah-chen,2026-03-30T11:12:00Z,"Useful benchmark report for social intelligence teams planning Q2.",positive,144,22100
+1006,Twitter,@sara_r,2026-03-30T11:40:00Z,"Support took too long to respond during the outage.",negative,671,9800

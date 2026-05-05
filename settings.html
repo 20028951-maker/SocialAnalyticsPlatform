@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Settings — SSMAP</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <link rel="stylesheet" href="css/style.css" />
+  <style>
+    .settings-layout { display: grid; grid-template-columns: 220px 1fr; gap: 28px; align-items: start; }
+    .settings-nav { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 8px; position: sticky; top: 24px; }
+    .s-nav-item { display: flex; align-items: center; gap: 12px; padding: 11px 14px; border-radius: var(--radius-sm); color: var(--text-secondary); font-size: 13.5px; font-weight: 500; cursor: pointer; transition: var(--transition); margin-bottom: 2px; border: none; background: none; width: 100%; font-family: inherit; }
+    .s-nav-item i { font-size: 15px; width: 18px; text-align: center; }
+    .s-nav-item:hover { background: var(--bg-card-hover); color: var(--text-primary); }
+    .s-nav-item.active { background: var(--primary); color: var(--on-primary); }
+    .s-nav-item.active i { color: var(--on-primary); }
+
+    .settings-panel { display: none; }
+    .settings-panel.active { display: block; }
+
+    .avatar-upload { display: flex; align-items: center; gap: 20px; margin-bottom: 24px; }
+    .avatar-large { width: 80px; height: 80px; border-radius: 50%; background: var(--gradient-primary); display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: 700; color: var(--on-primary); flex-shrink: 0; position: relative; cursor: pointer; }
+    .avatar-edit { position: absolute; bottom: 0; right: 0; width: 24px; height: 24px; border-radius: 50%; background: var(--primary); display: flex; align-items: center; justify-content: center; font-size: 10px; color: var(--on-primary); }
+
+    .theme-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; }
+    .theme-opt { border: 2px solid var(--border); border-radius: var(--radius-md); padding: 16px; cursor: pointer; text-align: center; transition: var(--transition); }
+    .theme-opt:hover { border-color: var(--primary); }
+    .theme-opt.selected { border-color: var(--primary); background: var(--bg-card-hover); }
+    .theme-preview { width: 100%; height: 52px; border-radius: var(--radius-sm); margin-bottom: 10px; display: flex; overflow: hidden; }
+    .theme-preview-dark { background: #000; }
+    .theme-preview-light { background: #fff; border:1px solid #d9d9d9; }
+    .theme-preview-system { background: linear-gradient(90deg, #000 50%, #fff 50%); border:1px solid #d9d9d9; }
+    .theme-label { font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 2px; }
+    .theme-sub { font-size: 11px; color: var(--text-muted); }
+    .theme-checkmark { display: none; color: var(--primary); font-size: 16px; margin-top: 6px; }
+    .theme-opt.selected .theme-checkmark { display: block; }
+
+    .accent-grid { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 8px; }
+    .accent-swatch { width: 36px; height: 36px; border-radius: 50%; cursor: pointer; border: 3px solid transparent; transition: var(--transition); }
+    .accent-swatch:hover, .accent-swatch.selected { border-color: var(--on-primary); transform: scale(1.15); }
+
+    .integration-card { display: flex; align-items: center; gap: 16px; padding: 16px; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: var(--radius-md); margin-bottom: 12px; }
+    .integration-icon { width: 44px; height: 44px; border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
+    .integration-info { flex: 1; }
+    .integration-name { font-size: 14px; font-weight: 600; color: var(--text-primary); }
+    .integration-status { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+    .integration-badge { font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 20px; }
+    .badge-connected { background: rgba(255,255,255,.12); color: var(--text-primary); }
+    .badge-not-connected { background: rgba(148,163,184,.1); color: var(--text-muted); }
+    .badge-coming { background: rgba(255,255,255,.12); color: var(--text-secondary); }
+
+    .notif-row { display: flex; align-items: center; justify-content: space-between; padding: 14px 0; border-bottom: 1px solid var(--border); }
+    .notif-row:last-child { border-bottom: none; }
+    .notif-info { flex: 1; }
+    .notif-title { font-size: 13px; font-weight: 600; color: var(--text-primary); }
+    .notif-desc { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+
+    .danger-item { display: flex; align-items: center; justify-content: space-between; padding: 16px; background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.12); border-radius: var(--radius-md); margin-bottom: 10px; }
+    .danger-info .danger-title { font-size: 13px; font-weight: 600; color: var(--text-primary); }
+    .danger-info .danger-desc { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+
+    .toggle { position: relative; display: inline-block; width: 42px; height: 22px; }
+    .toggle input { opacity: 0; width: 0; height: 0; }
+    .toggle-slider { position: absolute; cursor: pointer; inset: 0; background: var(--bg-secondary); border: 1px solid var(--border-light); border-radius: 22px; transition: .3s; }
+    .toggle-slider::before { content: ''; position: absolute; width: 16px; height: 16px; left: 2px; top: 2px; background: var(--text-muted); border-radius: 50%; transition: .3s; }
+    .toggle input:checked + .toggle-slider { background: var(--primary); border-color: var(--primary); }
+    .toggle input:checked + .toggle-slider::before { transform: translateX(20px); background: #fff; }
+
+    @media(max-width:800px) { .settings-layout { grid-template-columns: 1fr; } .settings-nav { position: static; } .theme-grid { grid-template-columns: 1fr 1fr 1fr; } }
+  </style>
+</head>
+<body>
+<div class="app-container">
+
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-icon"><i class="fa-solid fa-chart-network"></i></div>
+      <div><div class="logo-text">SSMAP</div><div class="logo-sub">Analytics Platform</div></div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section-title">Main</div>
+      <a href="dashboard.html" class="nav-item"><i class="fa-solid fa-grid-2"></i> Dashboard</a>
+      <a href="sentiment.html" class="nav-item"><i class="fa-solid fa-face-smile"></i> Sentiment Analysis</a>
+      <a href="trends.html"    class="nav-item"><i class="fa-solid fa-chart-line-up"></i> Trend Prediction</a>
+      <a href="upload.html"    class="nav-item"><i class="fa-solid fa-cloud-arrow-up"></i> Upload Dataset</a>
+      <a href="reports.html"   class="nav-item"><i class="fa-solid fa-file-chart-column"></i> Reports</a>
+      <div class="nav-section-title" style="margin-top:12px">Analytics</div>
+      <a href="topics.html"   class="nav-item"><i class="fa-solid fa-hashtag"></i> Topics <span class="nav-badge">New</span></a>
+      <a href="audience.html" class="nav-item"><i class="fa-solid fa-users"></i> Audience</a>
+      <a href="platforms.html" class="nav-item"><i class="fa-solid fa-share-nodes"></i> Platforms</a>
+      <div class="nav-section-title" style="margin-top:12px">System</div>
+      <a href="alerts.html"   class="nav-item"><i class="fa-solid fa-bell"></i> Alerts <span class="nav-badge">3</span></a>
+      <a href="settings.html" class="nav-item active"><i class="fa-solid fa-gear"></i> Settings</a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-card">
+        <div class="user-avatar">AJ</div>
+        <div><div class="user-name">Alex Johnson</div><div class="user-role">Admin</div></div>
+        <i class="fa-solid fa-ellipsis-vertical"></i>
+      </div>
+      <button class="btn btn-secondary btn-block btn-sm" style="margin-top:8px" id="logout-btn">
+        <i class="fa-solid fa-right-from-bracket"></i> Logout
+      </button>
+    </div>
+  </aside>
+
+  <div class="main-content">
+    <div class="topbar">
+      <div>
+        <div class="topbar-title">Settings</div>
+        <div class="topbar-subtitle">Manage your account, preferences, and integrations</div>
+      </div>
+      <div class="topbar-spacer"></div>
+      <button class="btn btn-primary btn-sm" onclick="saveAll()"><i class="fa-solid fa-floppy-disk"></i> Save Changes</button>
+    </div>
+
+    <div class="page-content">
+      <div class="settings-layout">
+
+        <!-- Side Nav -->
+        <div class="settings-nav animate-in">
+          <button class="s-nav-item active" onclick="showTab('profile', this)"><i class="fa-solid fa-user"></i> Profile</button>
+          <button class="s-nav-item" onclick="showTab('business', this)"><i class="fa-solid fa-building"></i> My Business</button>
+          <button class="s-nav-item" onclick="showTab('theme', this)"><i class="fa-solid fa-palette"></i> Theme</button>
+          <button class="s-nav-item" onclick="showTab('integrations', this)" data-role-min="Analyst"><i class="fa-solid fa-plug"></i> Integrations</button>
+          <button class="s-nav-item" onclick="showTab('notifications', this)"><i class="fa-solid fa-bell"></i> Notifications</button>
+          <div style="border-top:1px solid var(--border);margin:8px 0"></div>
+          <button class="s-nav-item" onclick="showTab('danger', this)"  data-role-only="Admin"><i class="fa-solid fa-triangle-exclamation" ></i> Danger Zone</button>
+        </div>
+
+        <!-- Panels -->
+        <div>
+
+          <!-- ── Profile ── -->
+          <div class="settings-panel active animate-in" id="tab-profile">
+            <div class="card" style="margin-bottom:20px">
+              <h3 style="margin-bottom:20px">Profile Information</h3>
+              <div class="avatar-upload">
+                <div class="avatar-large" id="avatar-display" onclick="showToast('Avatar upload coming soon','info')">
+                  <span id="avatar-initials">AJ</span><div class="avatar-edit"><i class="fa-solid fa-camera"></i></div>
+                </div>
+                <div>
+                  <div style="font-size:14px;font-weight:600;color:var(--text-primary)" id="profile-display-name">Alex Johnson</div>
+                  <div style="font-size:12px;color:var(--text-muted);margin-top:2px" id="profile-meta">Admin · alex@ssmap.io</div>
+                  <button class="btn btn-secondary btn-sm" style="margin-top:10px" onclick="showToast('Avatar upload coming soon','info')"><i class="fa-solid fa-upload"></i> Upload Photo</button>
+                </div>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+                <div class="form-group">
+                  <label class="form-label">First Name</label>
+                  <input type="text" class="form-control" id="first-name" value="Alex" />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Last Name</label>
+                  <input type="text" class="form-control" id="last-name" value="Johnson" />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Email</label>
+                  <input type="email" class="form-control" id="profile-email" value="alex@ssmap.io" />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Role</label>
+                  <select class="form-control" id="user-role-select" data-role-only="Admin">
+                    <option selected>Admin</option>
+                    <option>Analyst</option>
+                    <option>Viewer</option>
+                  </select>
+                </div>
+                <div class="form-group" style="grid-column:1/-1">
+                  <label class="form-label">Bio</label>
+                  <textarea class="form-control" rows="2" id="profile-bio" placeholder="Tell your team a bit about yourself…">Head of Social Intelligence @ SSMAP</textarea>
+                </div>
+              </div>
+            </div>
+
+            <div class="card">
+              <h3 style="margin-bottom:20px">Change Password</h3>
+              <div class="form-group">
+                <label class="form-label">Current Password</label>
+                <input type="password" class="form-control" placeholder="••••••••" />
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+                <div class="form-group">
+                  <label class="form-label">New Password</label>
+                  <input type="password" class="form-control" placeholder="••••••••" />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Confirm Password</label>
+                  <input type="password" class="form-control" placeholder="••••••••" />
+                </div>
+              </div>
+              <button class="btn btn-primary btn-sm" onclick="showToast('Password updated successfully!','success')"><i class="fa-solid fa-lock"></i> Update Password</button>
+            </div>
+          </div>
+
+          <!-- ── My Business ── -->
+          <div class="settings-panel" id="tab-business">
+            <div class="card" style="margin-bottom:20px">
+              <h3 style="margin-bottom:20px">Business Profile</h3>
+              <div class="form-group">
+                <label class="form-label">Company Name</label>
+                <input type="text" class="form-control" value="SSMAP Analytics Co." />
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+                <div class="form-group">
+                  <label class="form-label">Industry</label>
+                  <select class="form-control">
+                    <option selected>Technology</option>
+                    <option>Marketing</option>
+                    <option>Retail</option>
+                    <option>Finance</option>
+                    <option>Healthcare</option>
+                    <option>Other</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Company Size</label>
+                  <select class="form-control">
+                    <option>1–10</option>
+                    <option selected>11–50</option>
+                    <option>51–200</option>
+                    <option>200+</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Website</label>
+                  <input type="url" class="form-control" value="https://ssmap.io" />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Timezone</label>
+                  <select class="form-control">
+                    <option>UTC</option>
+                    <option selected>Australia/Sydney (AEST)</option>
+                    <option>America/New_York</option>
+                    <option>America/Los_Angeles</option>
+                    <option>Europe/London</option>
+                    <option>Asia/Singapore</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Business Description</label>
+                <textarea class="form-control" rows="3" placeholder="What does your business do?">We provide cutting-edge social media analytics powered by AI — helping teams understand sentiment, trends, and audience insights at scale.</textarea>
+              </div>
+            </div>
+
+            <div class="card">
+              <h3 style="margin-bottom:6px">Plan & Usage</h3>
+              <p style="font-size:13px;margin-bottom:20px">Current plan: <strong style="color:var(--primary-light)">Pro</strong></p>
+              <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:20px">
+                <div style="text-align:center;padding:16px;background:var(--bg-secondary);border-radius:var(--radius-md);border:1px solid var(--border)">
+                  <div style="font-size:22px;font-weight:800;color:var(--text-primary)" data-count="248391">0</div>
+                  <div style="font-size:11px;color:var(--text-muted);margin-top:4px;text-transform:uppercase;letter-spacing:.5px">Posts Analysed</div>
+                </div>
+                <div style="text-align:center;padding:16px;background:var(--bg-secondary);border-radius:var(--radius-md);border:1px solid var(--border)">
+                  <div style="font-size:22px;font-weight:800;color:var(--text-primary)">5 / 10</div>
+                  <div style="font-size:11px;color:var(--text-muted);margin-top:4px;text-transform:uppercase;letter-spacing:.5px">Team Seats</div>
+                </div>
+                <div style="text-align:center;padding:16px;background:var(--bg-secondary);border-radius:var(--radius-md);border:1px solid var(--border)">
+                  <div style="font-size:22px;font-weight:800;color:var(--text-primary)">12 / 20</div>
+                  <div style="font-size:11px;color:var(--text-muted);margin-top:4px;text-transform:uppercase;letter-spacing:.5px">Reports / Month</div>
+                </div>
+              </div>
+              <button class="btn btn-primary btn-sm" onclick="showToast('Redirecting to billing…','info')"><i class="fa-solid fa-arrow-up-right"></i> Upgrade to Enterprise</button>
+            </div>
+          </div>
+
+          <!-- ── Theme ── -->
+          <div class="settings-panel" id="tab-theme">
+            <div class="card" style="margin-bottom:20px">
+              <h3 style="margin-bottom:6px">Appearance</h3>
+              <p style="font-size:13px;margin-bottom:24px">Choose how SSMAP looks for you. Changes are saved instantly.</p>
+              <label class="form-label" style="margin-bottom:12px">Color Mode</label>
+              <div class="theme-grid" id="theme-grid">
+                <div class="theme-opt" onclick="applyTheme('dark', this)">
+                  <div class="theme-preview theme-preview-dark">
+                    <div style="width:40%;background:#0d1421;height:100%"></div>
+                    <div style="flex:1;padding:8px;display:flex;flex-direction:column;gap:4px">
+                      <div style="height:8px;background:#1a2235;border-radius:4px"></div>
+                      <div style="height:8px;background:var(--primary);border-radius:4px;width:60%"></div>
+                    </div>
+                  </div>
+                  <div class="theme-label">Dark</div>
+                  <div class="theme-sub">Easy on the eyes</div>
+                  <div class="theme-checkmark"><i class="fa-solid fa-circle-check"></i></div>
+                </div>
+                <div class="theme-opt" onclick="applyTheme('light', this)">
+                  <div class="theme-preview theme-preview-light">
+                    <div style="width:40%;background:#e2e8f0;height:100%"></div>
+                    <div style="flex:1;padding:8px;display:flex;flex-direction:column;gap:4px">
+                      <div style="height:8px;background:#cbd5e1;border-radius:4px"></div>
+                      <div style="height:8px;background:var(--primary);border-radius:4px;width:60%"></div>
+                    </div>
+                  </div>
+                  <div class="theme-label">Light</div>
+                  <div class="theme-sub">Classic &amp; clean</div>
+                  <div class="theme-checkmark"><i class="fa-solid fa-circle-check"></i></div>
+                </div>
+                <div class="theme-opt selected" onclick="applyTheme('system', this)">
+                  <div class="theme-preview theme-preview-system"></div>
+                  <div class="theme-label">System</div>
+                  <div class="theme-sub">Follows your OS</div>
+                  <div class="theme-checkmark"><i class="fa-solid fa-circle-check"></i></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="card" style="margin-bottom:20px">
+              <h3 style="margin-bottom:6px">Accent Color</h3>
+              <p style="font-size:13px;margin-bottom:4px">Theme accents are locked to black, white, and neutral greys.</p>
+              <div class="accent-grid">
+                <div class="accent-swatch selected" style="background:var(--primary)" title="Primary" onclick="selectAccent(this, 'var(--primary)')"></div>
+                <div class="accent-swatch" style="background:var(--text-secondary)" title="Grey" onclick="selectAccent(this, 'var(--text-secondary)')"></div>
+                <div class="accent-swatch" style="background:var(--text-secondary)" title="Grey" onclick="selectAccent(this, 'var(--text-secondary)')"></div>
+                <div class="accent-swatch" style="background:var(--text-primary)" title="Text" onclick="selectAccent(this, 'var(--text-primary)')"></div>
+                <div class="accent-swatch" style="background:var(--text-secondary)" title="Grey" onclick="selectAccent(this, 'var(--text-secondary)')"></div>
+                <div class="accent-swatch" style="background:var(--text-primary)" title="Text" onclick="selectAccent(this, 'var(--text-primary)')"></div>
+                <div class="accent-swatch" style="background:var(--text-muted)" title="Muted" onclick="selectAccent(this, 'var(--text-muted)')"></div>
+                <div class="accent-swatch" style="background:var(--text-muted)" title="Muted" onclick="selectAccent(this, 'var(--text-muted)')"></div>
+              </div>
+            </div>
+
+            <div class="card">
+              <h3 style="margin-bottom:16px">Display Preferences</h3>
+              <div class="notif-row">
+                <div class="notif-info"><div class="notif-title">Compact Mode</div><div class="notif-desc">Reduce padding and spacing throughout the UI</div></div>
+                <label class="toggle"><input type="checkbox" onchange="showToast('Compact mode '+(this.checked?'on':'off'),'info')"><span class="toggle-slider"></span></label>
+              </div>
+              <div class="notif-row">
+                <div class="notif-info"><div class="notif-title">Animated Charts</div><div class="notif-desc">Enable entrance animations on data visualisations</div></div>
+                <label class="toggle"><input type="checkbox" checked onchange="showToast('Chart animations '+(this.checked?'on':'off'),'info')"><span class="toggle-slider"></span></label>
+              </div>
+              <div class="notif-row">
+                <div class="notif-info"><div class="notif-title">Show Data Labels</div><div class="notif-desc">Display values directly on charts</div></div>
+                <label class="toggle"><input type="checkbox" onchange="showToast('Data labels '+(this.checked?'on':'off'),'info')"><span class="toggle-slider"></span></label>
+              </div>
+              <div class="notif-row">
+                <div class="notif-info"><div class="notif-title">High Contrast Mode</div><div class="notif-desc">Improve accessibility with higher contrast</div></div>
+                <label class="toggle"><input type="checkbox" onchange="showToast('High contrast '+(this.checked?'on':'off'),'info')"><span class="toggle-slider"></span></label>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── Integrations ── -->
+          <div class="settings-panel" id="tab-integrations">
+            <div class="card" style="margin-bottom:20px">
+              <h3 style="margin-bottom:6px">Social Platforms</h3>
+              <p style="font-size:13px;margin-bottom:20px">Connect your social accounts to pull live data into SSMAP.</p>
+
+              <div class="integration-card">
+                <div class="integration-icon" style="background:rgba(29,161,242,.15)"><i class="fa-brands fa-twitter" style="color:#1da1f2"></i></div>
+                <div class="integration-info"><div class="integration-name">Twitter / X</div><div class="integration-status">Connected · @ssmap_analytics · API v2</div></div>
+                <span class="integration-badge badge-connected">Connected</span>
+                <button class="btn btn-danger btn-sm" onclick="disconnect('Twitter')" data-role-min="Admin"><i class="fa-solid fa-unlink"></i> Disconnect</button>
+              </div>
+
+              <div class="integration-card">
+                <div class="integration-icon" style="background:rgba(255,69,0,.15)"><i class="fa-brands fa-reddit" style="color:#ff4500"></i></div>
+                <div class="integration-info"><div class="integration-name">Reddit</div><div class="integration-status">Free OAuth API · r/technology, r/AI ready</div></div>
+                <span class="integration-badge badge-info">Free API</span>
+                <button class="btn btn-primary btn-sm" onclick="connectOAuth('Reddit')" data-role-min="Admin"><i class="fa-brands fa-reddit"></i> Connect</button>
+                <button class="btn btn-danger btn-sm" onclick="disconnect('Reddit')" data-role-min="Admin"><i class="fa-solid fa-unlink"></i> Disconnect</button>
+              </div>
+
+              <div class="integration-card">
+                <div class="integration-icon" style="background:rgba(255,0,0,.12)"><i class="fa-brands fa-youtube" style="color:#ff0000"></i></div>
+                <div class="integration-info"><div class="integration-name">YouTube</div><div class="integration-status">Free OAuth API · YouTube Data API v3</div></div>
+                <span class="integration-badge badge-info">Free API</span>
+                <button class="btn btn-primary btn-sm" onclick="connectOAuth('YouTube')" data-role-min="Admin"><i class="fa-brands fa-youtube"></i> Connect</button>
+                <button class="btn btn-danger btn-sm" onclick="disconnect('YouTube')" data-role-min="Admin"><i class="fa-solid fa-unlink"></i> Disconnect</button>
+              </div>
+
+              <div class="integration-card">
+                <div class="integration-icon" style="background:rgba(255,255,255,.12)"><i class="fa-brands fa-instagram" style="color:#e1306c"></i></div>
+                <div class="integration-info"><div class="integration-name">Instagram</div><div class="integration-status">Not connected · Requires Meta Business Account</div></div>
+                <span class="integration-badge badge-coming">Requires Review</span>
+                <button class="btn btn-secondary btn-sm" onclick="connectOAuth('Instagram')" data-role-min="Admin"><i class="fa-brands fa-instagram"></i> Request Access</button>
+              </div>
+
+              <div class="integration-card">
+                <div class="integration-icon" style="background:rgba(10,102,194,.15)"><i class="fa-brands fa-linkedin" style="color:#0a66c2"></i></div>
+                <div class="integration-info"><div class="integration-name">LinkedIn</div><div class="integration-status">Not connected · Requires LinkedIn Page Admin access</div></div>
+                <span class="integration-badge badge-coming">Requires Admin</span>
+                <button class="btn btn-secondary btn-sm" onclick="connectOAuth('LinkedIn')" data-role-min="Admin"><i class="fa-brands fa-linkedin"></i> Request Access</button>
+              </div>
+
+              <div class="integration-card">
+                <div class="integration-icon" style="background:rgba(0,0,0,.3)"><i class="fa-brands fa-tiktok" style="color:#fff"></i></div>
+                <div class="integration-info"><div class="integration-name">TikTok</div><div class="integration-status">Not connected · TikTok for Business required</div></div>
+                <span class="integration-badge badge-not-connected">Not Connected</span>
+                <button class="btn btn-primary btn-sm" onclick="connectOAuth('TikTok')" data-role-min="Admin"><i class="fa-brands fa-tiktok"></i> Connect</button>
+              </div>
+            </div>
+
+            <div class="card">
+              <h3 style="margin-bottom:6px">Other Tools</h3>
+              <p style="font-size:13px;margin-bottom:20px">Connect collaboration, alerting, and data tools.</p>
+
+              <div class="integration-card">
+                <div class="integration-icon" style="background:rgba(97,31,105,.15)"><i class="fa-brands fa-slack" style="color:#611f69"></i></div>
+                <div class="integration-info"><div class="integration-name">Slack</div><div class="integration-status">Not connected · Send alerts to Slack channels</div></div>
+                <span class="integration-badge badge-not-connected">Not Connected</span>
+                <button class="btn btn-primary btn-sm" onclick="connectOAuth('Slack')" data-role-min="Admin"><i class="fa-brands fa-slack"></i> Connect</button>
+              </div>
+
+              <div class="integration-card">
+                <div class="integration-icon" style="background:rgba(255,255,255,.12)"><i class="fa-solid fa-webhook" style="color:var(--text-secondary)"></i></div>
+                <div class="integration-info"><div class="integration-name">Custom Webhook</div><div class="integration-status">Push alerts and events to any endpoint</div></div>
+                <span class="integration-badge badge-not-connected">Not Connected</span>
+                <button class="btn btn-secondary btn-sm" onclick="showToast('Webhook config opening…','info')"><i class="fa-solid fa-plus"></i> Configure</button>
+              </div>
+
+              <div class="integration-card">
+                <div class="integration-icon" style="background:rgba(255,255,255,.12)"><i class="fa-solid fa-file-excel" style="color:var(--text-secondary)"></i></div>
+                <div class="integration-info"><div class="integration-name">Google Sheets</div><div class="integration-status">Coming soon · Auto-export reports to Sheets</div></div>
+                <span class="integration-badge badge-coming">Coming Soon</span>
+                <button class="btn btn-secondary btn-sm" disabled>Notify Me</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── Notifications ── -->
+          <div class="settings-panel" id="tab-notifications">
+            <div class="card" style="margin-bottom:20px">
+              <h3 style="margin-bottom:6px">Notification Channels</h3>
+              <p style="font-size:13px;margin-bottom:20px">Choose how and where you receive alerts.</p>
+              <div class="notif-row">
+                <div class="notif-info"><div class="notif-title"><i class="fa-solid fa-envelope" style="color:var(--primary-light);margin-right:8px"></i>Email Notifications</div><div class="notif-desc">Critical alerts and daily digests to alex@ssmap.io</div></div>
+                <label class="toggle"><input type="checkbox" checked onchange="showToast('Email notifications '+(this.checked?'on':'off'),'info')"><span class="toggle-slider"></span></label>
+              </div>
+              <div class="notif-row">
+                <div class="notif-info"><div class="notif-title"><i class="fa-brands fa-slack" style="color:#611f69;margin-right:8px"></i>Slack Notifications</div><div class="notif-desc">Post alerts to #ssmap-alerts channel (not connected)</div></div>
+                <label class="toggle"><input type="checkbox" disabled><span class="toggle-slider"></span></label>
+              </div>
+              <div class="notif-row">
+                <div class="notif-info"><div class="notif-title"><i class="fa-solid fa-mobile-screen" style="color:var(--text-primary);margin-right:8px"></i>Push Notifications</div><div class="notif-desc">Browser push notifications for real-time alerts</div></div>
+                <label class="toggle"><input type="checkbox" checked onchange="showToast('Push notifications '+(this.checked?'on':'off'),'info')"><span class="toggle-slider"></span></label>
+              </div>
+              <div class="notif-row">
+                <div class="notif-info"><div class="notif-title"><i class="fa-solid fa-webhook" style="color:var(--text-secondary);margin-right:8px"></i>Webhook Delivery</div><div class="notif-desc">Send events to a custom endpoint (not configured)</div></div>
+                <label class="toggle"><input type="checkbox" disabled><span class="toggle-slider"></span></label>
+              </div>
+            </div>
+
+            <div class="card" style="margin-bottom:20px">
+              <h3 style="margin-bottom:6px">Alert Preferences</h3>
+              <p style="font-size:13px;margin-bottom:20px">Control which events trigger notifications.</p>
+              <div class="notif-row">
+                <div class="notif-info"><div class="notif-title">Critical Sentiment Spikes</div><div class="notif-desc">Negative sentiment exceeds critical threshold</div></div>
+                <label class="toggle"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+              </div>
+              <div class="notif-row">
+                <div class="notif-info"><div class="notif-title">Volume Anomalies</div><div class="notif-desc">Post volume deviates significantly from baseline</div></div>
+                <label class="toggle"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+              </div>
+              <div class="notif-row">
+                <div class="notif-info"><div class="notif-title">Crisis Keyword Detection</div><div class="notif-desc">Watched keywords appear in high volume</div></div>
+                <label class="toggle"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+              </div>
+              <div class="notif-row">
+                <div class="notif-info"><div class="notif-title">Positive Trend Alerts</div><div class="notif-desc">Significant positive sentiment improvements</div></div>
+                <label class="toggle"><input type="checkbox"><span class="toggle-slider"></span></label>
+              </div>
+              <div class="notif-row">
+                <div class="notif-info"><div class="notif-title">Report Ready</div><div class="notif-desc">Notify when a report has been generated</div></div>
+                <label class="toggle"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+              </div>
+              <div class="notif-row">
+                <div class="notif-info"><div class="notif-title">Daily Digest</div><div class="notif-desc">Summary email at 9:00 AM each morning</div></div>
+                <label class="toggle"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+              </div>
+              <div class="notif-row">
+                <div class="notif-info"><div class="notif-title">Weekly Summary</div><div class="notif-desc">Weekly performance report every Monday</div></div>
+                <label class="toggle"><input type="checkbox"><span class="toggle-slider"></span></label>
+              </div>
+            </div>
+
+            <div class="card">
+              <h3 style="margin-bottom:16px">Quiet Hours</h3>
+              <p style="font-size:13px;margin-bottom:16px">Suppress non-critical notifications during these hours.</p>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+                <div class="form-group">
+                  <label class="form-label">From</label>
+                  <input type="time" class="form-control" value="22:00" />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Until</label>
+                  <input type="time" class="form-control" value="08:00" />
+                </div>
+              </div>
+              <div class="notif-row" style="padding-top:0">
+                <div class="notif-info"><div class="notif-title">Enable Quiet Hours</div></div>
+                <label class="toggle"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── Danger Zone ── -->
+          <div class="settings-panel" id="tab-danger">
+            <div class="card" style="border-color:rgba(255,255,255,.12)">
+              <h3 style="margin-bottom:6px"><i class="fa-solid fa-triangle-exclamation" style="margin-right:8px"></i>Danger Zone</h3>
+              <p style="font-size:13px;margin-bottom:24px">These actions are irreversible. Please be certain before proceeding.</p>
+
+              <div class="danger-item">
+                <div class="danger-info"><div class="danger-title">Clear All Cached Data</div><div class="danger-desc">Removes cached analytics data. Processed datasets are preserved.</div></div>
+                <button class="btn btn-secondary btn-sm" onclick="showToast('Cache cleared successfully','success')"><i class="fa-solid fa-broom"></i> Clear Cache</button>
+              </div>
+
+              <div class="danger-item">
+                <div class="danger-info"><div class="danger-title">Reset Alert Rules</div><div class="danger-desc">Deletes all custom alert rules and reverts to defaults.</div></div>
+                <button class="btn btn-secondary btn-sm" onclick="confirmDanger('reset all alert rules')"><i class="fa-solid fa-rotate-left"></i> Reset Rules</button>
+              </div>
+
+              <div class="danger-item">
+                <div class="danger-info"><div class="danger-title">Revoke All OAuth Tokens</div><div class="danger-desc">Disconnects all social platform integrations immediately.</div></div>
+                <button class="btn btn-secondary btn-sm" onclick="confirmDanger('revoke all OAuth tokens')"><i class="fa-solid fa-key"></i> Revoke All</button>
+              </div>
+
+              <div class="danger-item" style="border-color:rgba(255,255,255,.12);background:rgba(255,255,255,.12)">
+                <div class="danger-info"><div class="danger-title">Delete Account</div><div class="danger-desc">Permanently deletes your account, all data, and reports. Cannot be undone.</div></div>
+                <button class="btn btn-danger btn-sm" onclick="confirmDanger('delete your account permanently')"><i class="fa-solid fa-trash"></i> Delete Account</button>
+              </div>
+            </div>
+          </div>
+
+        </div><!-- /panels -->
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="js/app.js"></script>
+<script>
+Auth.requireAuth();
+
+/* ─── Tab Navigation ─── */
+function showTab(tab, btn) {
+  document.querySelectorAll('.settings-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.s-nav-item').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  btn.classList.add('active');
+}
+
+/* ─── Theme ─── */
+function applyTheme(mode, el) {
+  document.querySelectorAll('.theme-opt').forEach(o => o.classList.remove('selected'));
+  el.classList.add('selected');
+  setThemePreference(mode);
+  const messages = { light: 'Light mode enabled', dark: 'Dark mode enabled', system: 'Following system preference' };
+  showToast(messages[mode] || 'Theme updated', mode === 'system' ? 'info' : 'success');
+}
+
+/* ─── Persist theme on load ─── */
+document.addEventListener('DOMContentLoaded', () => {
+  const saved = localStorage.getItem('ssmap-theme') || 'dark';
+  const el = document.querySelector(`.theme-opt[onclick*="${saved}"]`);
+  if (el) { document.querySelectorAll('.theme-opt').forEach(o => o.classList.remove('selected')); el.classList.add('selected'); }
+  applyStoredTheme(saved);
+});
+
+/* ─── Accent Color ─── */
+function selectAccent(el, color) {
+  document.querySelectorAll('.accent-swatch').forEach(s => s.classList.remove('selected'));
+  el.classList.add('selected');
+  localStorage.removeItem('ssmap-accent');
+  showToast('Theme accent is locked to black and white', 'info');
+}
+
+/* ─── Integrations ─── */
+function connectOAuth(platform) {
+  OAuth.connect(platform);
+}
+function disconnect(platform) {
+  OAuth.disconnect(platform);
+}
+
+/* ─── Danger ─── */
+function confirmDanger(action) {
+  const ok = window.confirm(`Are you sure you want to ${action}? This cannot be undone.`);
+  if (ok) showToast(`Action to ${action} initiated`, 'warning');
+}
+
+
+function splitName(fullName) {
+  const parts = (fullName || '').trim().split(/\s+/);
+  return { first: parts[0] || '', last: parts.slice(1).join(' ') || '' };
+}
+
+function syncProfileFromSession() {
+  const user = Auth.getUser();
+  if (!user) return;
+  const { first, last } = splitName(user.name);
+  const initials = user.avatar || ((first[0] || '') + (last[0] || '')).toUpperCase();
+  document.getElementById('first-name').value = first;
+  document.getElementById('last-name').value = last;
+  document.getElementById('profile-email').value = user.email || '';
+  document.getElementById('profile-display-name').textContent = user.name;
+  document.getElementById('profile-meta').textContent = `${user.role} · ${user.email || 'No email'}`;
+  document.getElementById('avatar-initials').textContent = initials;
+  const roleSelect = document.getElementById('user-role-select');
+  if (roleSelect) roleSelect.value = user.role;
+  const bio = document.getElementById('profile-bio');
+  if (bio) bio.value = user.bio || (user.role === 'Admin' ? 'Platform administrator for SSMAP.' : user.role === 'Analyst' ? 'Social analytics specialist focused on insights and reporting.' : 'Read-only stakeholder reviewing social intelligence dashboards.');
+}
+
+document.addEventListener('DOMContentLoaded', syncProfileFromSession);
+
+/* ─── Save All ─── */
+function saveAll() {
+  const fn = document.getElementById('first-name')?.value.trim() || '';
+  const ln = document.getElementById('last-name')?.value.trim() || '';
+  const email = document.getElementById('profile-email')?.value.trim() || '';
+  const role = document.getElementById('user-role-select')?.value;
+  const bio = document.getElementById('profile-bio')?.value || '';
+  const user = Auth.getUser();
+  if (user) {
+    const name = `${fn} ${ln}`.trim() || user.name;
+    const initials = ((fn[0] || name[0] || '') + (ln[0] || '')).toUpperCase();
+    Auth.login({ ...user, name, email, role: role || user.role, avatar: initials, bio });
+    populateUserInfo();
+    syncProfileFromSession();
+    applyRoleRestrictions();
+  }
+  showToast('All settings saved!', 'success');
+}
+</script>
+</body>
+</html>

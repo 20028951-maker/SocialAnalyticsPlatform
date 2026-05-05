@@ -154,6 +154,12 @@
     }
     .demo-hint i { color: var(--primary-light); }
 
+    .role-demo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 14px; }
+    .role-demo-btn { border: 1px solid var(--border); background: var(--bg-card); color: var(--text-secondary); border-radius: var(--radius-sm); padding: 10px 8px; cursor: pointer; font-family: inherit; transition: var(--transition); text-align: left; }
+    .role-demo-btn:hover { border-color: var(--primary); color: var(--text-primary); }
+    .role-demo-title { display: block; font-size: 12px; font-weight: 700; color: var(--text-primary); }
+    .role-demo-sub { display: block; font-size: 10px; color: var(--text-muted); margin-top: 2px; }
+
     .strength-bar { height: 4px; border-radius: 4px; background: var(--bg-secondary); margin-top: 8px; overflow: hidden; }
     .strength-fill { height: 100%; border-radius: 4px; transition: width 0.3s, background 0.3s; width: 0%; }
     .strength-label { font-size: 11px; margin-top: 4px; font-weight: 500; }
@@ -254,6 +260,12 @@
         <div class="divider-text"><span>or continue with</span></div>
 
         <div class="social-btns">
+          <button class="social-btn" onclick="socialLogin('Reddit')">
+            <i class="fa-brands fa-reddit" style="color:#ff4500"></i> Reddit
+          </button>
+          <button class="social-btn" onclick="socialLogin('YouTube')">
+            <i class="fa-brands fa-youtube" style="color:#ff0000"></i> YouTube
+          </button>
           <button class="social-btn" onclick="socialLogin('Google')">
             <i class="fa-brands fa-google"></i> Google
           </button>
@@ -264,7 +276,13 @@
 
         <div class="demo-hint">
           <i class="fa-solid fa-circle-info"></i>
-          Demo: use <strong>&nbsp;demo&nbsp;</strong> as username with any password
+          Demo logins: alex@ssmap.io = Admin, sarah@ssmap.io = Analyst, mike@ssmap.io = Viewer. Any password works.
+        </div>
+
+        <div class="role-demo-grid" aria-label="Demo role shortcuts">
+          <button class="role-demo-btn" onclick="loginAsRole('Admin')" type="button"><span class="role-demo-title">Login as Admin</span><span class="role-demo-sub">Alex Johnson · full access</span></button>
+          <button class="role-demo-btn" onclick="loginAsRole('Analyst')" type="button"><span class="role-demo-title">Login as Analyst</span><span class="role-demo-sub">Sarah Chen · create & analyze</span></button>
+          <button class="role-demo-btn" onclick="loginAsRole('Viewer')" type="button"><span class="role-demo-title">Login as Viewer</span><span class="role-demo-sub">Mike Taylor · read only</span></button>
         </div>
       </div>
 
@@ -307,6 +325,15 @@
         <div class="form-group">
           <label class="form-label">Organization (optional)</label>
           <input type="text" class="form-control" id="signup-org" placeholder="Your company or university" />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Account Role</label>
+          <select class="form-control" id="signup-role">
+            <option value="Analyst" selected>Analyst — create and analyze</option>
+            <option value="Viewer">Viewer — read only</option>
+            <option value="Admin">Admin — full access</option>
+          </select>
         </div>
 
         <div class="form-group">
@@ -389,19 +416,28 @@
       const email  = document.getElementById('signup-email').value.trim();
       const pwd    = document.getElementById('signup-password').value;
       const agreed = document.getElementById('agree-terms').checked;
+      const role   = document.getElementById('signup-role')?.value || 'Analyst';
 
       if (!first || !last || !email || !pwd) { showToast('Please fill in all required fields', 'error'); return; }
       if (!agreed) { showToast('Please agree to the Terms of Service', 'warning'); return; }
       if (pwd.length < 8) { showToast('Password must be at least 8 characters', 'error'); return; }
 
-      const user = { id: 99, name: first + ' ' + last, email, role: 'Analyst', avatar: first[0] + last[0] };
+      const user = { id: 99, name: first + ' ' + last, email, role, avatar: (first[0] + last[0]).toUpperCase() };
       Auth.login(user);
-      showToast('Account created! Welcome aboard.', 'success');
+      showToast('Account created as ' + role + '!', 'success');
       setTimeout(() => window.location.href = 'dashboard.html', 800);
     }
 
+    function loginAsRole(role) {
+      const user = MOCK_USERS.find(u => u.role === role) || MOCK_USERS[0];
+      Auth.login(user);
+      showToast('Continuing as ' + role, 'success');
+      setTimeout(() => window.location.href = 'dashboard.html', 500);
+    }
+
     function socialLogin(provider) {
-      showToast(provider + ' OAuth integration coming soon!', 'info');
+      if (provider === 'Google' || provider === 'Reddit' || provider === 'YouTube') return connectOAuth(provider);
+      showToast(provider + ' login is not configured for this demo', 'info');
     }
 
     function checkPasswordStrength(pwd) {

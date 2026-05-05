@@ -90,8 +90,8 @@
       <a href="audience.html" class="nav-item"><i class="fa-solid fa-users"></i> Audience</a>
       <a href="platforms.html" class="nav-item"><i class="fa-solid fa-share-nodes"></i> Platforms</a>
       <div class="nav-section-title" style="margin-top:12px">System</div>
-      <a href="#" class="nav-item"><i class="fa-solid fa-bell"></i> Alerts <span class="nav-badge">3</span></a>
-      <a href="#" class="nav-item"><i class="fa-solid fa-gear"></i> Settings</a>
+      <a href="alerts.html" class="nav-item"><i class="fa-solid fa-bell"></i> Alerts <span class="nav-badge">3</span></a>
+      <a href="settings.html" class="nav-item"><i class="fa-solid fa-gear"></i> Settings</a>
     </nav>
     <div class="sidebar-footer">
       <div class="user-card">
@@ -168,7 +168,7 @@
                 <div class="card-subtitle">Twitter_Mar2026_Tech · Generated Mar 30, 2026</div>
               </div>
               <div class="flex gap-2">
-                <button class="btn btn-secondary btn-sm" onclick="showToast('Opening print preview…','info')"><i class="fa-solid fa-print"></i> Print</button>
+                <button class="btn btn-secondary btn-sm" onclick="window.print()"><i class="fa-solid fa-print"></i> Print</button>
                 <button class="btn btn-primary btn-sm" onclick="downloadReport('Monthly Summary')"><i class="fa-solid fa-download"></i> Download</button>
               </div>
             </div>
@@ -322,7 +322,7 @@
               <span style="font-size:13px;color:var(--text-muted)">Showing 5 of 12 reports</span>
               <div class="flex gap-2">
                 <button class="btn btn-secondary btn-sm"><i class="fa-solid fa-chevron-left"></i></button>
-                <button class="btn btn-secondary btn-sm" style="background:rgba(99,102,241,.15);border-color:var(--primary);color:var(--primary-light)">1</button>
+                <button class="btn btn-secondary btn-sm" style="background:var(--primary);border-color:var(--primary);color:var(--on-primary)">1</button>
                 <button class="btn btn-secondary btn-sm">2</button>
                 <button class="btn btn-secondary btn-sm">3</button>
                 <button class="btn btn-secondary btn-sm"><i class="fa-solid fa-chevron-right"></i></button>
@@ -537,15 +537,91 @@
 
   function generateReport() {
     const title = document.getElementById('report-title').value || 'Analytics Report';
-    const btn = event?.target?.closest('button');
     showToast('Generating report…', 'info');
-    setTimeout(() => {
-      showToast(`"${title}" ready! Downloading as ${selectedFormat.toUpperCase()}…`, 'success');
-    }, 1800);
+    setTimeout(() => downloadReport(title, selectedFormat), 900);
   }
 
-  function downloadReport(name) {
-    showToast(`Downloading "${name}" report…`, 'success');
+  function getReportRows(name) {
+    const summary = typeof getAnalyticsSummary === 'function' ? getAnalyticsSummary() : null;
+    if (summary) {
+      const neutralRate = summary.totalPosts ? Math.round((summary.neutralCount / summary.totalPosts) * 100) : 0;
+      const negativeRate = Math.max(0, 100 - summary.positiveRate - neutralRate);
+      return [
+        ['Report', name],
+        ['Generated', new Date().toLocaleString()],
+        ['Dataset', summary.datasetName],
+        ['Period', document.querySelector('#report-period')?.value || 'Uploaded dataset'],
+        ['Source', 'Uploaded CSV'],
+        [],
+        ['Metric', 'Value', 'Notes'],
+        ['Total Posts', summary.totalPosts, 'Rows found in uploaded file'],
+        ['Positive Sentiment', summary.positiveRate + '%', summary.positiveCount + ' posts'],
+        ['Neutral Sentiment', neutralRate + '%', summary.neutralCount + ' posts'],
+        ['Negative Sentiment', negativeRate + '%', summary.negativeCount + ' posts'],
+        ['Top Platform', summary.topPlatform, 'Most frequent platform'],
+        ['Top Topics', summary.topics.join(', ') || 'None detected', 'Estimated from post text'],
+        ['Trend Confidence', summary.trendConfidence + '%', 'Frontend estimate']
+      ];
+    }
+    return [
+      ['Report', name],
+      ['Generated', new Date().toLocaleString()],
+      ['Dataset', document.querySelector('#report-dataset')?.value || 'Twitter_Mar2026_Tech'],
+      ['Period', document.querySelector('#report-period')?.value || 'Last 30 days'],
+      [],
+      ['Metric', 'Value', 'Change'],
+      ['Total Posts', '248391', '+12.4%'],
+      ['Positive Sentiment', '71%', '+8%'],
+      ['Neutral Sentiment', '19%', '-3%'],
+      ['Negative Sentiment', '10%', '-5%'],
+      ['Engagement Rate', '5.4%', '+0.8%'],
+      ['Active Alerts', '12', '-4']
+    ];
+  }
+
+  function escapeCell(value) {
+    const text = String(value ?? '');
+    return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+  }
+
+  function downloadBlob(filename, content, type) {
+    const blob = new Blob([content], { type });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  function downloadReport(name, format = selectedFormat) {
+    const safeName = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'analytics-report';
+    const rows = getReportRows(name);
+
+    if (format === 'pdf') {
+      showToast('Use the print dialog to save this report as PDF', 'info');
+      window.print();
+      return;
+    }
+
+    if (format === 'json') {
+      const payload = {
+        title: name,
+        generatedAt: new Date().toISOString(),
+        metrics: Object.fromEntries(rows.slice(7).filter(row => row.length >= 2).map(([metric, value, note]) => [metric, { value, note }]))
+      };
+      downloadBlob(`${safeName}.json`, JSON.stringify(payload, null, 2), 'application/json');
+    } else if (format === 'xlsx') {
+      const tsv = rows.map(row => row.map(v => String(v ?? '').replace(/\t/g, ' ')).join('\t')).join('\n');
+      downloadBlob(`${safeName}.xls`, tsv, 'application/vnd.ms-excel');
+    } else {
+      const csv = rows.map(row => row.map(escapeCell).join(',')).join('\n');
+      downloadBlob(`${safeName}.csv`, csv, 'text/csv;charset=utf-8');
+    }
+
+    showToast(`Downloaded "${name}" as ${format.toUpperCase()}`, 'success');
   }
 
   function applyTemplate(type) {
